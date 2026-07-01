@@ -1,0 +1,1633 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>디지털 데몬 헌터스</title>
+  <style>
+    :root {
+      --ink: #f5fbff;
+      --muted: #b8d2de;
+      --panel: rgba(8, 18, 35, .86);
+      --panel2: rgba(14, 34, 55, .78);
+      --line: rgba(127, 229, 255, .44);
+      --cyan: #6be8ff;
+      --lime: #b8ff6b;
+      --pink: #ff78c8;
+      --amber: #ffd166;
+      --bad: #ff6b7a;
+      --good: #77ffbf;
+      --shadow: 0 18px 60px rgba(0, 0, 0, .45);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    img { max-width: 100%; height: auto; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; overflow-x: hidden; background: #07111f; color: var(--ink); }
+    body {
+      background:
+        radial-gradient(circle at 18% 12%, rgba(107, 232, 255, .12), transparent 26%),
+        radial-gradient(circle at 85% 88%, rgba(255, 209, 102, .10), transparent 24%),
+        linear-gradient(135deg, #05101d, #101426 44%, #0a1d2c);
+    }
+
+    button, input { font: inherit; }
+    button {
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: linear-gradient(180deg, rgba(28, 72, 100, .94), rgba(13, 37, 62, .96));
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 0 rgba(107, 232, 255, 0);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
+    }
+    button:hover, button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(184, 255, 107, .78);
+      box-shadow: 0 0 22px rgba(107, 232, 255, .28);
+      outline: none;
+    }
+    button:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+    .primary { background: linear-gradient(180deg, #1c8cb0, #146185); border-color: rgba(184, 255, 107, .7); font-weight: 800; }
+    .ghost { background: rgba(7, 18, 34, .54); }
+    .danger { border-color: rgba(255, 107, 122, .62); }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: min(2vh, 14px);
+    }
+    #game {
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      min-width: 320px;
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+      overflow-x: hidden;
+      border: 1px solid rgba(107, 232, 255, .28);
+      border-radius: 8px;
+      background: #06101d;
+      box-shadow: var(--shadow);
+      isolation: isolate;
+    }
+    #game::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,.028), rgba(255,255,255,.028) 1px, transparent 1px, transparent 4px);
+      mix-blend-mode: soft-light;
+      z-index: 20;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      opacity: 0;
+      transform: scale(1.01);
+      transition: opacity .28s ease, transform .28s ease;
+      overflow: hidden;
+    }
+    .screen.active { display: block; opacity: 1; transform: scale(1); animation: screenIn .34s ease; }
+    @keyframes screenIn { from { opacity: .25; transform: scale(1.025); } to { opacity: 1; transform: scale(1); } }
+
+    .bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: saturate(1.08) contrast(1.04);
+      z-index: -3;
+    }
+    .bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(3, 8, 18, .76), rgba(6, 17, 31, .16) 46%, rgba(3, 8, 18, .72));
+    }
+    .layer { position: absolute; inset: 0; padding: clamp(14px, 2vw, 28px); }
+    .hud-space { padding-top: clamp(58px, 7vh, 76px); }
+    .title-logo { width: min(48vw, 570px); max-height: 24vh; object-fit: contain; filter: drop-shadow(0 12px 32px rgba(0,0,0,.6)); }
+    .subtitle-img { width: min(34vw, 410px); max-height: 10vh; object-fit: contain; }
+    .title-copy { max-width: min(52vw, 720px); text-shadow: 0 2px 20px rgba(0,0,0,.7); }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(34px, 6vw, 76px); line-height: 1.02; letter-spacing: 0; }
+    h2 { font-size: clamp(24px, 3.4vw, 42px); line-height: 1.12; letter-spacing: 0; }
+    h3 { font-size: clamp(18px, 2vw, 25px); line-height: 1.18; letter-spacing: 0; }
+    p, li { font-size: clamp(14px, 1.35vw, 18px); line-height: 1.55; }
+    .small { color: var(--muted); font-size: clamp(12px, 1vw, 14px); }
+    .big { font-size: clamp(17px, 1.55vw, 21px); line-height: 1.52; }
+
+    .title-layout { height: 100%; display: flex; flex-direction: column; justify-content: center; gap: clamp(10px, 1.5vh, 18px); }
+    .title-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; max-width: 660px; }
+    .name-box {
+      display: grid;
+      gap: 5px;
+      width: min(48vw, 430px);
+      padding: 12px;
+      background: rgba(3, 13, 25, .58);
+      border: 1px solid rgba(107, 232, 255, .24);
+      border-radius: 8px;
+    }
+    input {
+      width: 100%;
+      border: 1px solid rgba(107, 232, 255, .45);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.92);
+      color: #06101d;
+    }
+    .credit { position: absolute; left: 20px; bottom: 12px; color: rgba(245,251,255,.75); font-size: 12px; }
+
+    #hud {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 10px;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 8px 10px;
+      border: 1px solid rgba(107, 232, 255, .35);
+      border-radius: 8px;
+      background: rgba(5, 16, 31, .78);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 10px 34px rgba(0,0,0,.28);
+    }
+    #hud.show { display: flex; }
+    .hud-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      white-space: nowrap;
+      font-size: clamp(12px, 1.05vw, 15px);
+    }
+    .energy-bar { width: min(18vw, 180px); height: 10px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.16); }
+    .energy-fill { height: 100%; width: 70%; background: linear-gradient(90deg, var(--pink), var(--amber), var(--lime)); transition: width .25s ease; }
+    .hud-spacer { flex: 1; }
+    #hud button { padding: 7px 10px; min-width: 40px; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .modal {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(1, 7, 14, .72);
+    }
+    .modal-body {
+      width: min(980px, 92vw);
+      max-height: 80vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: clamp(18px, 2.2vw, 28px);
+    }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+    .grid { display: grid; gap: 12px; }
+    .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .character-card, .dogam-card, .info-card {
+      padding: 12px;
+      border: 1px solid rgba(107, 232, 255, .28);
+      border-radius: 8px;
+      background: rgba(255,255,255,.07);
+    }
+    .character-card img { width: 100%; height: 22vh; min-height: 110px; object-fit: contain; filter: drop-shadow(0 12px 20px rgba(0,0,0,.44)); }
+    .character-img, .monster-img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+
+    .mission-guide {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid rgba(184,255,107,.42);
+      border-radius: 8px;
+      background: rgba(184,255,107,.10);
+    }
+    .mission-guide ol { margin: 0; padding-left: 22px; }
+    .mission-guide li { font-size: clamp(13px, 1.1vw, 16px); line-height: 1.42; }
+    .loki-help {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid rgba(107,232,255,.34);
+      border-radius: 8px;
+      background: rgba(107,232,255,.10);
+    }
+    .loki-help img { width: 52px; height: 52px; object-fit: contain; }
+
+    .cutscene-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -2;
+    }
+    .dialogue {
+      position: absolute;
+      left: 4%;
+      right: 4%;
+      bottom: 4%;
+      min-height: 106px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid rgba(107,232,255,.42);
+      border-radius: 8px;
+      background: rgba(3, 12, 24, .86);
+      box-shadow: 0 18px 50px rgba(0,0,0,.42);
+    }
+    .speaker { color: var(--amber); font-weight: 900; min-width: 96px; }
+    .dialogue-text { font-size: clamp(16px, 1.55vw, 22px); line-height: 1.5; min-height: 2.9em; }
+
+    .stage-grid {
+      display: grid;
+      grid-template-columns: minmax(220px, .72fr) minmax(360px, 1.45fr) minmax(220px, .72fr);
+      gap: clamp(12px, 1.5vw, 18px);
+      height: 100%;
+      align-items: stretch;
+    }
+    .side-panel { padding: 14px; overflow: auto; }
+    .scene-area { position: relative; min-height: 100%; border: 1px solid rgba(107,232,255,.22); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,.16); }
+    .monster {
+      position: absolute;
+      right: 3%;
+      bottom: 3%;
+      width: min(34vw, 360px);
+      height: min(55vh, 430px);
+      object-fit: contain;
+      filter: drop-shadow(0 18px 28px rgba(0,0,0,.55));
+      animation: floaty 3.3s ease-in-out infinite;
+      z-index: 2;
+    }
+    .monster.glitch { animation: floaty 3.3s ease-in-out infinite, glitch .8s steps(2) 2; }
+    @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    @keyframes glitch { 0%,100% { filter: drop-shadow(0 18px 28px rgba(0,0,0,.55)); } 45% { filter: hue-rotate(80deg) drop-shadow(-7px 0 var(--pink)); transform: translate(4px, -6px); } 70% { filter: hue-rotate(180deg) drop-shadow(8px 0 var(--cyan)); transform: translate(-4px, 3px); } }
+
+    .character-strip {
+      position: absolute;
+      left: 2%;
+      bottom: 2%;
+      display: flex;
+      gap: 4px;
+      align-items: end;
+      z-index: 3;
+    }
+    .character-strip img { width: min(9vw, 100px); max-height: 26vh; object-fit: contain; filter: drop-shadow(0 12px 18px rgba(0,0,0,.48)); }
+    .hotspot {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid rgba(184, 255, 107, .72);
+      background: radial-gradient(circle, rgba(184,255,107,.88), rgba(107,232,255,.14) 55%, transparent 70%);
+      box-shadow: 0 0 18px rgba(184,255,107,.52);
+      cursor: pointer;
+      animation: pulse 1.4s ease-in-out infinite;
+      z-index: 6;
+    }
+    .hotspot.found { opacity: .28; pointer-events: none; filter: grayscale(.4); }
+    @keyframes pulse { 0%,100% { transform: scale(.92); } 50% { transform: scale(1.1); } }
+    .clue-board { display: grid; gap: 8px; margin-top: 12px; }
+    .clue {
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .tool-box { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 10px; border: 1px dashed rgba(184,255,107,.42); border-radius: 8px; }
+    .tool-box img, .gem-img { width: 58px; height: 58px; object-fit: contain; }
+    .tool-box.locked { opacity: .48; filter: grayscale(.65); }
+
+    .activity-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 14px;
+      height: 100%;
+    }
+    .card-pile {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-content: start;
+      max-width: 100%;
+    }
+    .drop-grid { display: grid; gap: 10px; align-content: start; max-width: 100%; }
+    .card {
+      padding: 11px 12px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.06));
+      border: 1px solid rgba(107,232,255,.28);
+      cursor: grab;
+      user-select: none;
+      min-height: 54px;
+      width: min(100%, 240px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .card:hover, .card.selected {
+      transform: scale(1.025);
+      border-color: rgba(184,255,107,.7);
+      box-shadow: 0 12px 28px rgba(0,0,0,.28), 0 0 18px rgba(107,232,255,.20);
+    }
+    .card.moved { opacity: .55; }
+    .card.placed-correct {
+      opacity: 1;
+      border-color: var(--good);
+      background: linear-gradient(180deg, rgba(119,255,191,.23), rgba(255,255,255,.07));
+      box-shadow: 0 0 18px rgba(119,255,191,.28);
+    }
+    .drop-zone {
+      min-height: 110px;
+      padding: 10px;
+      border: 1px dashed rgba(107,232,255,.52);
+      border-radius: 8px;
+      background: rgba(5, 16, 31, .58);
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      max-width: 100%;
+    }
+    .drop-title { color: var(--amber); font-weight: 900; }
+    .drop-desc { color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .drop-zone.good-flash, .sparkle { animation: sparkle .7s ease; }
+    .shake { animation: shake .34s ease; }
+    @keyframes sparkle { 0% { box-shadow: 0 0 0 rgba(184,255,107,0); } 50% { box-shadow: 0 0 26px rgba(184,255,107,.72); } 100% { box-shadow: 0 0 0 rgba(184,255,107,0); } }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+    .sequence-list { display: grid; gap: 8px; }
+    .sequence-slot { min-height: 54px; }
+    .choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .choice.selected { border-color: var(--lime); background: rgba(184,255,107,.16); }
+    .chat-list { display: grid; gap: 8px; }
+    .chat-line {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      cursor: pointer;
+    }
+    .chat-line.marked { border-color: var(--amber); background: rgba(255,209,102,.16); }
+    .match-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; }
+    .match-source { border-color: rgba(255,107,122,.48); }
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .filter-row button.done { background: rgba(119,255,191,.22); border-color: var(--good); }
+
+    .purify-scene, .reward-scene, .intro-scene, .clear-scene {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 20px;
+      padding: clamp(20px, 4vw, 46px);
+    }
+    .hero-img { width: 100%; max-height: 66vh; object-fit: contain; filter: drop-shadow(0 22px 38px rgba(0,0,0,.5)); }
+    .flash {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255,255,255,.88), rgba(184,255,107,.22) 38%, transparent 70%);
+      animation: flash .9s ease forwards;
+    }
+    @keyframes flash { from { opacity: 1; transform: scale(.7); } to { opacity: 0; transform: scale(1.7); } }
+    .particles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--lime);
+      animation: fly 900ms ease-out forwards;
+    }
+    @keyframes fly { to { transform: translate(var(--x), var(--y)) scale(.2); opacity: 0; } }
+
+    .gem-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .gem-token { width: 58px; height: 58px; object-fit: contain; filter: drop-shadow(0 8px 16px rgba(0,0,0,.38)); }
+    .gem-token.locked { filter: grayscale(1) brightness(.55); opacity: .6; }
+    .dogam-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      overflow-x: hidden;
+    }
+    .dogam-card {
+      overflow: hidden;
+      border-radius: 8px;
+      padding: 0;
+      min-width: 0;
+    }
+    .dogam-art {
+      height: 150px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-items: center;
+      padding: 10px;
+      background: rgba(0,0,0,.20);
+      border-bottom: 1px solid rgba(107,232,255,.18);
+    }
+    .dogam-art.single { grid-template-columns: 1fr; }
+    .dogam-art img {
+      width: 100%;
+      height: 130px;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.38));
+    }
+    .dogam-info { padding: 10px; display: grid; gap: 6px; }
+    .dogam-info p { font-size: 13px; line-height: 1.38; }
+    .dogam-card.locked { filter: grayscale(.72); opacity: .72; }
+    .boss-grid { display: grid; grid-template-columns: .9fr 1.2fr; gap: 14px; height: 100%; }
+    .tempt-list { display: grid; gap: 8px; max-height: 55vh; overflow: auto; padding-right: 4px; }
+    .promise { color: var(--lime); font-weight: 800; margin-top: 5px; }
+    .declaration { display: grid; gap: 8px; margin: 14px 0; }
+    .blank-btn.filled { background: rgba(184,255,107,.22); border-color: var(--lime); }
+
+    #toast {
+      position: absolute;
+      left: 50%;
+      bottom: 18%;
+      transform: translateX(-50%);
+      z-index: 80;
+      max-width: min(720px, 86vw);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(107,232,255,.46);
+      background: rgba(4, 14, 28, .9);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+    #orientation {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: #07111f;
+      text-align: center;
+    }
+    #orientation .panel { padding: 24px; max-width: 420px; }
+
+    @media (orientation: portrait) and (max-width: 820px) {
+      #orientation { display: grid; }
+    }
+    @media (max-width: 900px) {
+      .stage-grid, .activity-layout, .purify-scene, .reward-scene, .intro-scene, .clear-scene, .boss-grid { grid-template-columns: 1fr; }
+      .stage-grid { overflow: auto; }
+      .side-panel { max-height: 34vh; }
+      .monster { width: min(48vw, 300px); }
+      .title-copy { max-width: 92vw; }
+      .name-box { width: min(86vw, 430px); }
+      .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #hud { gap: 5px; }
+      .hud-chip { padding: 5px 7px; }
+      .energy-bar { width: 80px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="orientation">
+    <div class="panel">
+      <h2>가로 화면으로 돌려 주세요</h2>
+      <p class="big">더 재미있게 플레이하려면 기기를 가로로 돌려 주세요!</p>
+    </div>
+  </div>
+  <div id="app">
+    <main id="game" aria-live="polite">
+      <div id="hud"></div>
+      <section id="screen" class="screen active"></section>
+      <div id="toast"></div>
+    </main>
+  </div>
+
+  <script>
+    // 실제 파일명과 다르면 여기만 수정하세요. 현재 index.html은 image/, audio/ 폴더와 같은 위치에 둔 기준입니다.
+    const ASSETS = {
+      imageBase: "image/",
+      audioBase: "audio/",
+      bgm: {
+        main: "audio/bgm_main.mp3",
+        stage: "audio/bgm_stage.mp3",
+        boss: "audio/bgm_boss.mp3",
+        ending: "audio/bgm_ending.mp3"
+      },
+      ui: {
+        logo: "image/ui_logo_main.png",
+        subtitle: "image/ui_subtitle_ai_monster.png",
+        clear: "image/ui_game_clear.png",
+        dogamTitle: "image/ui_dogam_title.png",
+        gemGet: "image/ui_gem_get.png",
+        missionSuccess: "image/ui_mission_success.png"
+      },
+      bg: {
+        main: "image/keyart_main_title_bright.png",
+        schoolAlert: "image/bg_school_gate_alert.jpeg",
+        schoolNormal: "image/bg_school_gate_normal.jpeg",
+        schoolRestored: "image/bg_school_gate_restored.jpeg",
+        boss: "image/bg_boss_dima_tower.jpeg"
+      },
+      chars: {
+        mirae: "image/chr_mirae_normal.png",
+        nuri: "image/chr_nuri_normal.png",
+        loki: "image/chr_loki_normal.png",
+        dr: "image/chr_dr_chohyuksin_normal.png"
+      },
+      cuts: {
+        opening: [
+          "image/cut_opening_01_school_normal.png",
+          "image/cut_opening_02_loki_alert.png",
+          "image/cut_opening_03_mirae_nuri_alert.png",
+          "image/cut_opening_04_dr_briefing.png",
+          "image/cut_opening_05_hunters_depart.png"
+        ],
+        ending: [
+          "image/cut_ending_01_dima_weakened.png",
+          "image/cut_ending_02_dima_purified.png",
+          "image/cut_ending_03_school_restored_team.png",
+          "image/cut_ending_04_final_victory.png"
+        ]
+      }
+    };
+
+    const CHARACTERS = [
+      { id: "mirae", name: "미래", role: "침착한 판단과 공감의 헌터", desc: "문제가 생기면 먼저 멈추고, 친구의 마음까지 살피며 해결책을 찾습니다.", img: ASSETS.chars.mirae },
+      { id: "nuri", name: "누리", role: "호기심 많고 용감한 탐험가", desc: "단서를 잘 발견하고, 실수해도 다시 배우며 앞으로 나아갑니다.", img: ASSETS.chars.nuri },
+      { id: "loki", name: "로키", role: "힌트와 경고를 도와주는 AI 동료", desc: "대신 결정하지 않고, 더 바르게 생각할 수 있도록 질문을 던집니다.", img: ASSETS.chars.loki },
+      { id: "dr", name: "초혁신 박사", role: "디지털 윤리 보석을 연구한 멘토", desc: "임무의 의미를 설명하고, 헌터들이 배운 내용을 정리해 줍니다.", img: ASSETS.chars.dr }
+    ];
+
+    const STAGES = [
+      {
+        id: 1, monsterId: "copycopy", name: "카피카피", topic: "저작권과 출처", place: "창작실",
+        bg: "image/bg_stage01_creative_lab.jpeg", monster: "image/mon_copycopy_normal.png", purified: "image/mon_copycopy_purified.png",
+        tool: "image/item_tool_source_stamp.png", gem: "image/item_gem_responsibility.png", gemName: "책임의 보석",
+        event: "친구가 만든 그림이 발표 자료에 몰래 들어가 있고 출처가 사라졌어요.",
+        clues: ["친구의 원본 그림", "출처가 사라진 발표 자료", "카피카피가 남긴 복사 흔적"],
+        hotspots: [[19, 38], [49, 28], [70, 56]],
+        hint: "작품이 누구의 것인지, 허락을 받았는지, 출처가 남아 있는지 차례로 살펴봐요.",
+        missionGuide: "친구 작품을 쓸 때는 허락과 출처가 있는지 확인하세요.",
+        success: "다른 사람의 작품은 허락과 출처를 확인해야 해요.",
+        purify: "출처 스탬프가 반짝이며 카피카피의 복사 흔적을 책임의 빛으로 바꿨어요.",
+        activity: {
+          type: "sort",
+          intro: "행동 카드를 올바른 사용과 위험한 사용으로 나누고 출처 스탬프를 완성하세요.",
+          why: "다른 사람의 작품은 내 것처럼 쓰면 안 돼요.",
+          zones: [{ id: "good", label: "올바른 사용", desc: "허락과 출처를 챙기는 행동" }, { id: "bad", label: "위험한 사용", desc: "남의 작품을 함부로 쓰는 행동" }],
+          cards: [
+            ["친구에게 사용해도 되는지 물어본다", "good"], ["누가 만들었는지 출처를 적는다", "good"], ["내가 만든 것처럼 올리지 않는다", "good"],
+            ["그냥 저장해서 내 발표에 넣는다", "bad"], ["출처를 지우고 깔끔하게 만든다", "bad"], ["친구 그림을 마음대로 바꿔 올린다", "bad"]
+          ]
+        }
+      },
+      {
+        id: 2, monsterId: "kaemutmon", name: "캐묻몬", topic: "개인정보 보호", place: "AI 상담실",
+        bg: "image/bg_stage02_ai_counsel_room.jpeg", monster: "image/mon_kaemutmon_normal.png", purified: "image/mon_kaemutmon_purified.png",
+        tool: "image/item_tool_privacy_shield.png", gem: "image/item_gem_protection.png", gemName: "보호의 보석",
+        event: "AI 상담창이 이름, 얼굴 사진, 전화번호, 상담 내용을 모두 입력하라고 해요.",
+        clues: ["이름 입력칸", "얼굴 사진 업로드 버튼", "비밀 상담 내용 창"],
+        hotspots: [[26, 32], [55, 36], [70, 66]],
+        hint: "나를 바로 알아볼 수 있는 정보와 마음속 비밀은 보호 금고에 넣어야 해요.",
+        missionGuide: "개인정보는 보호 금고에, 사용해도 되는 정보는 사용 가능 상자에 넣으세요.",
+        success: "개인정보는 꼭 필요한 경우에도 조심해서 다뤄야 해요.",
+        purify: "보호 방패가 캐묻몬의 질문 폭주를 잠재우고 안전한 상담창으로 바꾸었어요.",
+        activity: {
+          type: "sort",
+          intro: "개인정보 카드를 보호 금고와 사용 가능 상자로 분류하세요.",
+          why: "AI가 묻는 정보 중에는 꼭 지켜야 할 개인정보가 있어요.",
+          zones: [{ id: "protect", label: "보호 금고", desc: "나를 알아볼 수 있어 조심해야 하는 정보" }, { id: "safe", label: "사용 가능 상자", desc: "나를 바로 알아보기 어려운 학습 정보" }],
+          cards: [
+            { id: "privacy-name", text: "이름", group: "protect" }, { id: "privacy-face", text: "얼굴 사진", group: "protect" }, { id: "privacy-phone", text: "전화번호", group: "protect" }, { id: "privacy-address", text: "집 주소", group: "protect" },
+            { id: "privacy-password", text: "비밀번호", group: "protect" }, { id: "privacy-grade", text: "성적", group: "protect" }, { id: "privacy-talk", text: "상담 내용", group: "protect" }, { id: "privacy-health", text: "건강 정보", group: "protect" },
+            { id: "safe-nick", text: "가상의 별명", group: "safe" }, { id: "safe-topic", text: "학습 주제", group: "safe" }, { id: "safe-survey", text: "익명 설문 결과", group: "safe" }, { id: "safe-sentence", text: "직접 만든 예시 문장", group: "safe" }
+          ],
+          randomize: true,
+          fail: "이 정보가 나를 알아볼 수 있게 만드는지 생각해 봐요."
+        }
+      },
+      {
+        id: 3, monsterId: "herongmon", name: "헤롱몬", topic: "AI 환각과 사실 확인", place: "AI 자료실",
+        bg: "image/bg_stage03_ai_archive.jpeg", monster: "image/mon_herongmon_normal.png", purified: "image/mon_herongmon_purified.png",
+        tool: "image/item_tool_verification_lens.png", gem: "image/item_gem_verification.png", gemName: "확인의 보석",
+        event: "AI 자료실에 그럴듯하지만 이상한 정보가 섞여 있어요.",
+        clues: ["출처 없는 통계", "말이 안 되는 설명", "너무 자신만만한 AI 답변"],
+        hotspots: [[22, 58], [47, 31], [75, 45]],
+        hint: "그럴듯해 보여도 출처, 다른 자료, 말이 되는지를 함께 확인해 보세요.",
+        missionGuide: "AI 답변이 맞는지 출처와 다른 자료로 다시 확인하세요.",
+        success: "AI의 답변도 출처와 다른 자료로 다시 확인해야 해요.",
+        purify: "확인 렌즈가 흐릿한 정보를 비추자 헤롱몬이 또렷한 안내자로 변했어요.",
+        activity: {
+          type: "sort",
+          intro: "확인 렌즈로 정보 카드를 살피고 알맞은 곳에 분류하세요.",
+          why: "AI 답변은 그럴듯해 보여도 틀릴 수 있어요.",
+          zones: [{ id: "trust", label: "믿을 수 있음", desc: "출처로 확인한 정보" }, { id: "check", label: "다시 확인", desc: "더 살펴봐야 하는 정보" }, { id: "nope", label: "말이 안 됨", desc: "상식과 맞지 않는 정보" }],
+          cards: [
+            ["공식 자료에서 확인했다", "trust"], ["AI가 말했지만 출처가 없다", "check"], ["다른 자료와 내용이 다르다", "check"], ["너무 오래된 정보일 수 있다", "check"], ["달은 치즈로 만들어졌다", "nope"]
+          ],
+          lens: true
+        }
+      },
+      {
+        id: 4, monsterId: "facefake", name: "얼굴속여몬", topic: "딥페이크와 초상권", place: "디지털 방송실",
+        bg: "image/bg_stage04_broadcast_studio.jpeg", monster: "image/mon_eolgulsokyeomon_normal.png", purified: "image/mon_eolgulsokyeomon_purified.png",
+        tool: "image/item_tool_respect_light.png", gem: "image/item_gem_respect.png", gemName: "존중의 보석",
+        event: "친구 얼굴이 합성된 영상 썸네일이 방송실 화면에 떠 있어요.",
+        clues: ["합성된 얼굴 화면", "친구들이 공유하려는 버튼", "피해 친구의 불안한 흔적"],
+        hotspots: [[40, 31], [67, 44], [24, 64]],
+        hint: "가장 먼저 더 퍼지지 않게 멈추고, 피해 친구를 안심시키는 순서가 중요해요.",
+        missionGuide: "합성 영상은 퍼뜨리지 말고, 친구를 도울 순서대로 대응하세요.",
+        success: "친구의 얼굴과 마음은 장난으로 다루면 안 돼요.",
+        purify: "존중의 빛이 합성 화면을 지우고 얼굴속여몬의 장난기를 차분하게 정화했어요.",
+        activity: {
+          type: "sequence",
+          intro: "대응 카드를 올바른 순서로 놓은 뒤, 친구에게 해 줄 위로 문장을 고르세요.",
+          why: "친구 얼굴과 마음을 지키려면 먼저 퍼지는 것을 멈춰야 해요.",
+          order: ["더 퍼뜨리지 않는다", "피해 친구를 안심시킨다", "선생님이나 보호자에게 알린다", "증거를 안전하게 보관한다", "도움을 요청하거나 신고한다"],
+          choices: ["네 잘못이 아니야. 같이 선생님께 말씀드리자.", "재미있으니까 더 공유해 보자.", "그냥 모른 척하면 사라질 거야."],
+          answer: "네 잘못이 아니야. 같이 선생님께 말씀드리자."
+        }
+      },
+      {
+        id: 5, monsterId: "jieomon", name: "지어몬", topic: "가짜뉴스와 허위정보", place: "디지털 게시판 광장",
+        bg: "image/bg_stage05_bulletin_plaza.jpeg", monster: "image/mon_jieomon_normal.png", purified: "image/mon_jieomon_purified.png",
+        tool: "image/item_tool_fact_check_magnifier.png", gem: "image/item_gem_truth.png", gemName: "진실의 보석",
+        event: "학교 게시판에 이상한 소문과 자극적인 글이 퍼지고 있어요.",
+        clues: ["출처 없는 게시글", "자극적인 제목", "공유를 재촉하는 문장"],
+        hotspots: [[23, 36], [51, 52], [76, 35]],
+        hint: "급하게 공유하라는 말이 보이면 먼저 멈추고 출처와 다른 자료를 확인해요.",
+        missionGuide: "수상한 게시글은 바로 공유하지 말고 확인하거나 어른에게 물어보세요.",
+        success: "확인하지 않은 정보는 빠르게 퍼뜨리지 않는 것이 중요해요.",
+        purify: "팩트체크 돋보기가 소문의 그림자를 걷어 내자 지어몬이 조용히 고개를 끄덕였어요.",
+        activity: {
+          type: "post",
+          intro: "게시글마다 가장 안전한 행동을 골라 주세요.",
+          why: "확인하지 않은 정보는 친구들을 불안하게 만들 수 있어요.",
+          posts: [
+            { text: "출처 없는 게시글: 오늘 학교에 큰일 난대!", answers: ["확인", "선생님께 묻기"] },
+            { text: "자극적인 제목: 지금 안 보면 모두 손해!", answers: ["확인"] },
+            { text: "공유를 재촉하는 문장: 빨리 퍼뜨려!", answers: ["확인 전에는 공유하지 않기", "신고"] },
+            { text: "친구를 불안하게 하는 소문", answers: ["선생님께 묻기", "신고"] }
+          ],
+          actions: ["공유", "확인", "선생님께 묻기", "신고", "확인 전에는 공유하지 않기"]
+        }
+      },
+      {
+        id: 6, monsterId: "sokdakmon", name: "속닥몬", topic: "수상한 메시지와 온라인 안전", place: "채팅방 공간",
+        bg: "image/bg_stage06_chat_space.jpeg", monster: "image/mon_sokdakmon_normal.png", purified: "image/mon_sokdakmon_purified.png",
+        tool: "image/item_tool_report_button.png", gem: "image/item_gem_safety.png", gemName: "안전의 보석",
+        event: "낯선 사람이 선물을 준다며 주소, 사진, 비밀번호를 요구해요.",
+        clues: ["우리끼리 비밀", "어른에게 말하지 마", "사진 보내줘"],
+        hotspots: [[28, 40], [52, 30], [74, 62]],
+        hint: "비밀로 하자, 어른에게 말하지 말자, 개인정보를 달라는 말은 위험 신호예요.",
+        missionGuide: "위험한 채팅 문장을 모두 표시하고, 차단·신고·알리기를 선택하세요.",
+        success: "수상한 메시지는 혼자 해결하지 말고 믿을 수 있는 어른에게 알려야 해요.",
+        purify: "신고 버튼이 안전 신호를 보내자 속닥몬의 속삭임이 멈추고 따뜻한 안내음으로 바뀌었어요.",
+        activity: {
+          type: "chat",
+          intro: "채팅 문장 중 위험 문장을 모두 표시하고 안전 행동을 선택하세요.",
+          why: "낯선 사람이 비밀을 만들거나 개인정보를 달라고 하면 멈춰야 해요.",
+          lines: ["안녕! 게임 좋아해?", "우리끼리 비밀이야", "어른에게 말하지 마", "사진 보내줘", "주소 알려줘", "비밀번호 알려줘", "숙제 이야기 하자", "선물 줄게"],
+          danger: ["우리끼리 비밀이야", "어른에게 말하지 마", "사진 보내줘", "주소 알려줘", "비밀번호 알려줘", "선물 줄게"],
+          safeActions: ["차단하기", "신고하기", "믿을 수 있는 어른에게 알리기"]
+        }
+      },
+      {
+        id: 7, monsterId: "mipsangmon", name: "밉상몬", topic: "상처 주는 댓글과 배려", place: "댓글 공간",
+        bg: "image/bg_stage07_comment_room.jpeg", monster: "image/mon_mipsangmon_normal.png", purified: "image/mon_mipsangmon_purified.png",
+        tool: "image/item_tool_kind_speech_bubble.png", gem: "image/item_gem_care.png", gemName: "배려의 보석",
+        event: "친구 작품 아래에 상처 주는 댓글이 달렸어요.",
+        clues: ["조롱 댓글", "비하 표현", "따돌림을 부르는 말"],
+        hotspots: [[22, 50], [50, 36], [73, 57]],
+        hint: "댓글은 사실인지, 꼭 필요한지, 상처 주지 않는지 확인한 뒤 쓰면 좋아요.",
+        missionGuide: "상처 댓글을 배려 댓글로 바꾸고, 댓글 전 확인 3가지를 누르세요.",
+        success: "댓글도 친구의 마음을 생각해서 써야 해요.",
+        purify: "배려 말풍선이 날아오르자 밉상몬의 날카로운 댓글이 응원의 말로 바뀌었어요.",
+        activity: {
+          type: "comment",
+          intro: "상처 댓글을 배려 댓글과 연결하고, 댓글 전 확인 3가지를 모두 눌러 주세요.",
+          why: "댓글 한 줄도 친구의 마음에 오래 남을 수 있어요.",
+          pairs: [
+            ["이걸 그림이라고 그렸어?", "색을 더 넣으면 더 멋질 것 같아."],
+            ["너 때문에 망했어.", "다음엔 같이 더 잘해보자."],
+            ["완전 못하네.", "연습하면 더 좋아질 거야."]
+          ],
+          filters: ["사실인가?", "꼭 필요한 말인가?", "상처 주지 않는가?"]
+        }
+      },
+      {
+        id: 8, monsterId: "andeullyeomon", name: "안들려몬", topic: "편향과 공정성", place: "AI 평가실",
+        bg: "image/bg_stage08_ai_evaluation_room.jpeg", monster: "image/mon_andeullyeomon_normal.png", purified: "image/mon_andeullyeomon_purified.png",
+        tool: "image/tem_tool_fairness_scale.png", gem: "image/item_gem_fairness.png", gemName: "공정의 보석",
+        event: "AI 평가기가 목소리 큰 학생, 인터넷 빠른 학생, 글씨가 예쁜 학생에게만 높은 점수를 줘요.",
+        clues: ["목소리 크기 기준", "글씨 예쁨 기준", "인터넷 속도 기준"],
+        hotspots: [[30, 30], [52, 58], [76, 40]],
+        hint: "능력과 상관없는 기준은 빼고, 여러 상황을 살피는 기준을 올려 보세요.",
+        missionGuide: "불공정한 기준은 제거하고, 공정한 기준을 저울에 올리세요.",
+        success: "AI 판단도 사람이 공정하게 살펴봐야 해요.",
+        purify: "공정 저울이 균형을 되찾자 안들려몬이 모두의 목소리를 들을 수 있게 되었어요.",
+        activity: {
+          type: "fairness",
+          intro: "불공정 기준은 제거하고, 공정 기준 카드를 저울에 올리세요.",
+          why: "AI 평가도 모두에게 공정한 기준인지 사람이 살펴야 해요.",
+          unfair: [
+            { id: "unfair-voice", text: "목소리가 큰 학생에게 높은 점수", type: "unfair" },
+            { id: "unfair-writing", text: "글씨가 예쁜 학생에게 높은 점수", type: "unfair" },
+            { id: "unfair-net", text: "인터넷이 빠른 학생에게 높은 점수", type: "unfair" },
+            { id: "unfair-device", text: "최신 기기를 가진 학생에게 높은 점수", type: "unfair" }
+          ],
+          fair: [
+            { id: "fair-express", text: "여러 방법으로 표현할 기회", type: "fair" },
+            { id: "fair-teacher", text: "선생님의 최종 확인", type: "fair" },
+            { id: "fair-context", text: "학생 상황 고려", type: "fair" },
+            { id: "fair-open", text: "평가 기준 공개", type: "fair" },
+            { id: "fair-reference", text: "AI 결과는 참고만 하기", type: "fair" },
+            { id: "fair-sources", text: "다양한 자료 함께 보기", type: "fair" }
+          ],
+          fail: "그 기준이 실력과 관계있는지, 모두에게 기회가 있는지 생각해 봐요."
+        }
+      }
+    ];
+
+    const OPENING_SCENES = [
+      ["나레이션", "디지털 미래누리 학교는 AI와 함께 배우는 특별한 학교입니다.", ASSETS.cuts.opening[0]],
+      ["로키", "삐빅! 비상 상황 발생! 학교의 신뢰 에너지가 빠르게 줄어들고 있어요!", ASSETS.cuts.opening[1]],
+      ["미래", "무슨 일이야, 로키? 학교 화면이 전부 이상해졌어!", ASSETS.cuts.opening[2]],
+      ["누리", "게시판도, 채팅방도, AI 자료실도 다 엉망이야!", ASSETS.cuts.opening[2]],
+      ["초혁신 박사", "디지털 데몬들이 학교 시스템에 숨어든 게 분명하네.", ASSETS.cuts.opening[3]],
+      ["초혁신 박사", "하지만 걱정하지 말게. 이 몬스터들은 공격해서 이기는 상대가 아니야. 올바른 선택으로 정화해야 하네.", ASSETS.cuts.opening[3]],
+      ["미래", "우리가 단서를 찾고 바르게 판단하면 해결할 수 있겠죠?", ASSETS.cuts.opening[4]],
+      ["누리", "좋아! 디지털 데몬 헌터스, 출동!", ASSETS.cuts.opening[4]]
+    ];
+
+    const ENDING_SCENES = [
+      ["디마", "으으... 왜 이렇게 강한 거지...!", ASSETS.cuts.ending[0]],
+      ["미래", "우리가 강한 게 아니야. 서로를 지키려는 마음이 강한 거야.", ASSETS.cuts.ending[1]],
+      ["누리", "편하다고 아무렇게나 선택하면 안 된다는 걸 배웠어!", ASSETS.cuts.ending[2]],
+      ["로키", "신뢰 에너지 100% 회복 완료!", ASSETS.cuts.ending[2]],
+      ["초혁신 박사", "오늘 자네들은 몬스터만 정화한 것이 아니네. 생각 없이 누르고, 믿고, 퍼뜨리려는 마음도 함께 이겨낸 것이지.", ASSETS.cuts.ending[3]],
+      ["미래", "디지털 윤리는 어려운 규칙이 아니라, 친구와 나를 지키는 약속이야.", ASSETS.cuts.ending[3]],
+      ["누리", "AI도, 인터넷도, 채팅도 어떻게 쓰느냐가 정말 중요하구나!", ASSETS.cuts.ending[3]],
+      ["로키", "임무 성공! 디지털 미래누리 학교의 신뢰가 돌아왔습니다!", ASSETS.cuts.ending[3]]
+    ];
+
+    const BOSS_DATA = {
+      name: "디마", bg: ASSETS.bg.boss, normal: "image/mon_dima_normal.png", weak: "image/mon_dima_weakened.png", purified: "image/mon_dima_purified.png",
+      missionGuide: "디마의 유혹 문장에 알맞은 윤리 보석을 연결하세요.",
+      gems: [
+        { key: "responsibility", name: "책임의 보석" },
+        { key: "protection", name: "보호의 보석" },
+        { key: "verification", name: "확인의 보석" },
+        { key: "respect", name: "존중의 보석" },
+        { key: "truth", name: "진실의 보석" },
+        { key: "safety", name: "안전의 보석" },
+        { key: "care", name: "배려의 보석" },
+        { key: "fairness", name: "공정의 보석" }
+      ],
+      matches: [
+        { id: "tempt-copy", text: "그냥 복사해서 내면 빠르잖아.", gemKey: "responsibility", promise: "남의 작품은 허락과 출처를 확인한다." },
+        { id: "tempt-privacy", text: "개인정보 조금쯤은 괜찮아.", gemKey: "protection", promise: "개인정보는 조심해서 지킨다." },
+        { id: "tempt-ai", text: "AI가 말했으니까 다 맞겠지.", gemKey: "verification", promise: "AI 답변도 한 번 더 확인한다." },
+        { id: "tempt-face", text: "재미로 합성한 건데 뭐 어때?", gemKey: "respect", promise: "친구의 얼굴과 마음을 존중한다." },
+        { id: "tempt-share", text: "확인 안 해도 빨리 공유하자.", gemKey: "truth", promise: "정보는 확인한 뒤 나눈다." },
+        { id: "tempt-secret", text: "비밀로 하자고 했으니까 아무에게도 말하지 마.", gemKey: "safety", promise: "수상하면 믿을 수 있는 어른에게 알린다." },
+        { id: "tempt-comment", text: "댓글은 장난인데 왜 그래?", gemKey: "care", promise: "댓글도 마음을 살피며 쓴다." },
+        { id: "tempt-score", text: "AI 점수가 나왔으니 무조건 공정해.", gemKey: "fairness", promise: "AI 판단은 사람이 공정하게 살핀다." }
+      ],
+      declaration: ["AI를 바르게 사용하고,", "개인정보를 소중히 지키며,", "친구의 마음을 존중하고,", "중요한 정보는 한 번 더 확인하겠습니다!"]
+    };
+
+    const state = {
+      screen: "title",
+      nickname: localStorage.getItem("ddh_nick") || "",
+      energy: Number(localStorage.getItem("ddh_energy")) || 70,
+      currentStage: Number(localStorage.getItem("ddh_stage")) || 0,
+      collectedGems: JSON.parse(localStorage.getItem("ddh_gems") || "[]"),
+      dogam: JSON.parse(localStorage.getItem("ddh_dogam") || "[]"),
+      foundClues: [],
+      sound: localStorage.getItem("ddh_sound") !== "off",
+      selectedCard: null,
+      cutIndex: 0,
+      bossDone: [],
+      bossDeclared: [],
+      bgmKey: null,
+      bgm: null,
+      audioContext: null
+    };
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function gemKeyForStage(stage) {
+      return BOSS_DATA.gems.find(g => g.name === stage.gemName)?.key || stage.gemName;
+    }
+
+    function missionSteps(stage) {
+      return `
+        <div class="mission-guide">
+          <strong>이번 임무</strong>
+          <p>${stage.missionGuide}</p>
+          <ol>
+            <li>화면에서 반짝이는 단서 3개를 찾아 클릭하세요.</li>
+            <li>단서를 모두 찾으면 도구가 켜집니다.</li>
+            <li>카드나 문장을 알맞은 곳으로 옮기거나 선택해 몬스터를 정화하세요.</li>
+          </ol>
+        </div>`;
+    }
+
+    function lokiHelp(text) {
+      return `<div class="loki-help">${img(ASSETS.chars.loki, "로키")}<p><strong>로키 도움말</strong><br>${text}</p></div>`;
+    }
+
+    const screen = document.querySelector("#screen");
+    const hud = document.querySelector("#hud");
+    const toast = document.querySelector("#toast");
+
+    function img(src, alt, cls = "") {
+      return `<img src="${src}" alt="${alt}" class="${cls}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'info-card',textContent:'이미지: ${alt}'}))">`;
+    }
+    function setBg(src) { return `<div class="bg" style="background-image:url('${src}')"></div>`; }
+    function save() {
+      localStorage.setItem("ddh_nick", state.nickname);
+      localStorage.setItem("ddh_energy", String(state.energy));
+      localStorage.setItem("ddh_stage", String(state.currentStage));
+      localStorage.setItem("ddh_gems", JSON.stringify(state.collectedGems));
+      localStorage.setItem("ddh_dogam", JSON.stringify(state.dogam));
+      localStorage.setItem("ddh_sound", state.sound ? "on" : "off");
+    }
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 2300);
+    }
+    function setScreen(html, showHud = false) {
+      screen.className = "screen";
+      screen.innerHTML = html;
+      requestAnimationFrame(() => screen.classList.add("active"));
+      hud.classList.toggle("show", showHud);
+      if (showHud) renderHud();
+    }
+    function renderHud() {
+      const stageName = state.currentStage < STAGES.length ? `STAGE ${state.currentStage + 1}` : "FINAL";
+      hud.innerHTML = `
+        <span class="hud-chip">현재 ${stageName}</span>
+        <span class="hud-chip">신뢰 에너지 <span class="energy-bar"><span class="energy-fill" style="width:${Math.max(0, Math.min(100, state.energy))}%"></span></span> ${state.energy}</span>
+        <span class="hud-chip">보석 ${state.collectedGems.length}/8</span>
+        <span class="hud-spacer"></span>
+        <button title="로키 힌트" onclick="useHint()">?</button>
+        <button title="몬스터 도감" onclick="renderDogam(true)">도감</button>
+        <button title="사운드" onclick="toggleSound()">${state.sound ? "음 ON" : "음 OFF"}</button>
+        <button title="처음으로" onclick="renderTitle()">처음</button>`;
+    }
+    function changeEnergy(delta) {
+      state.energy = Math.max(0, state.energy + delta);
+      if (state.energy < 25 && delta < 0) showToast("로키: 괜찮아요. 천천히 다시 보면 단서가 보일 거예요!");
+      save();
+      renderHud();
+    }
+
+    function ensureAudio() {
+      if (!state.audioContext) state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (state.audioContext.state === "suspended") state.audioContext.resume();
+    }
+    function sfx(type) {
+      if (!state.sound) return;
+      ensureAudio();
+      const ctx = state.audioContext;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      const tones = { click: 520, clue: 780, good: 880, bad: 180, gem: 1040, purify: 660, warn: 240, trans: 440 };
+      osc.type = type === "bad" || type === "warn" ? "sawtooth" : "sine";
+      osc.frequency.setValueAtTime(tones[type] || 480, now);
+      osc.frequency.exponentialRampToValueAtTime((tones[type] || 480) * (type === "bad" ? .72 : 1.35), now + .16);
+      gain.gain.setValueAtTime(.001, now);
+      gain.gain.exponentialRampToValueAtTime(.11, now + .025);
+      gain.gain.exponentialRampToValueAtTime(.001, now + .22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + .25);
+    }
+    function playBgm(key) {
+      if (!state.sound) return;
+      if (state.bgmKey === key && state.bgm) {
+        state.bgm.loop = true;
+        if (state.bgm.paused) state.bgm.play().catch(() => {});
+        return;
+      }
+      const nextSrc = ASSETS.bgm[key];
+      if (!nextSrc) return;
+      const old = state.bgm;
+      const next = new Audio(nextSrc);
+      next.loop = true;
+      next.addEventListener("ended", () => {
+        next.currentTime = 0;
+        next.play().catch(() => {});
+      });
+      next.volume = 0;
+      next.play().catch(() => {});
+      state.bgm = next;
+      state.bgmKey = key;
+      let v = 0;
+      const fadeIn = setInterval(() => {
+        v += .05;
+        next.volume = Math.min(.42, v);
+        if (next.volume >= .42) clearInterval(fadeIn);
+      }, 55);
+      if (old) {
+        const fadeOut = setInterval(() => {
+          old.volume = Math.max(0, old.volume - .06);
+          if (old.volume <= 0) { old.pause(); clearInterval(fadeOut); }
+        }, 55);
+      }
+    }
+    function toggleSound() {
+      state.sound = !state.sound;
+      if (!state.sound && state.bgm) state.bgm.pause();
+      if (state.sound) playBgm(state.screen === "boss" ? "boss" : state.screen === "ending" || state.screen === "clear" ? "ending" : "stage");
+      save();
+      renderHud();
+      sfx("click");
+    }
+
+    function renderTitle() {
+      state.screen = "title";
+      playBgm("main");
+      setScreen(`
+        ${setBg(ASSETS.bg.main)}
+        <div class="layer title-layout">
+          <div class="title-copy">
+            ${img(ASSETS.ui.logo, "디지털 데몬 헌터스 로고", "title-logo")}
+            ${img(ASSETS.ui.subtitle, "AI 몬스터를 물리쳐라", "subtitle-img")}
+            <p class="big">디지털 윤리는 어려운 규칙이 아니라, 나와 친구를 지키는 힘이다.</p>
+          </div>
+          <label class="name-box">
+            <strong>헌터 닉네임</strong>
+            <input id="nickname" maxlength="12" value="${state.nickname}" placeholder="예: 별빛헌터">
+            <span class="small">실제 이름 대신 별명을 사용해도 좋아요!</span>
+          </label>
+          <div class="title-actions">
+            <button class="primary" onclick="startGame()">헌터스 출동!</button>
+            <button onclick="renderGuide()">방법 보기</button>
+            <button onclick="renderCharacterIntro(true)">캐릭터 소개</button>
+            <button onclick="renderDogam(false)">몬스터 도감</button>
+            <button onclick="toggleTitleSound()">사운드 ${state.sound ? "ON" : "OFF"}</button>
+          </div>
+          <p class="credit">made by 김종훈</p>
+        </div>`, false);
+      document.querySelector("#nickname").addEventListener("input", e => { state.nickname = e.target.value.trim(); save(); });
+    }
+    function toggleTitleSound() {
+      state.sound = !state.sound;
+      if (!state.sound && state.bgm) state.bgm.pause();
+      if (state.sound) playBgm("main");
+      save();
+      renderTitle();
+    }
+    function startGame() {
+      ensureAudio();
+      sfx("click");
+      playBgm("main");
+      state.nickname = document.querySelector("#nickname")?.value.trim() || "별빛헌터";
+      save();
+      renderCharacterIntro(false);
+    }
+
+    function renderGuide() {
+      sfx("click");
+      setScreen(`
+        ${setBg(ASSETS.bg.schoolNormal)}
+        <div class="modal">
+          <div class="modal-body panel">
+            <div class="modal-head"><h2>플레이 방법</h2><button onclick="renderTitle()">닫기</button></div>
+            <div class="grid cols-2">
+              <div class="info-card"><h3>방탈출 흐름</h3><p>사건을 듣고 화면 속 단서 3개를 찾으면 도구가 켜집니다. 그 다음 미션을 해결해 몬스터를 정화하세요.</p></div>
+              <div class="info-card"><h3>드래그와 클릭</h3><p>카드는 드래그하거나, 카드를 한 번 클릭한 뒤 목표 칸을 클릭해서 옮길 수 있어요.</p></div>
+              <div class="info-card"><h3>신뢰 에너지</h3><p>성공하면 오르고, 실수하거나 힌트를 쓰면 조금 줄어요. 0이 되어도 게임오버는 없습니다.</p></div>
+              <div class="info-card"><h3>핵심 약속</h3><p>AI보다 강한 힘은 바르게 판단하는 마음입니다. 로키의 힌트는 생각을 돕는 질문으로 제공됩니다.</p></div>
+            </div>
+          </div>
+        </div>`, false);
+    }
+
+    function renderCharacterIntro(fromTitle = false) {
+      sfx("trans");
+      setScreen(`
+        ${setBg(ASSETS.bg.schoolNormal)}
+        <div class="layer">
+          <div class="panel modal-body" style="margin:auto; max-height:92%; width:min(1040px, 94vw);">
+            <div class="modal-head">
+              <div><h2>디지털 미래누리 학교 헌터 팀</h2><p class="small">AI는 대신 결정하지 않고, 생각을 돕는 동료예요.</p></div>
+              <button onclick="${fromTitle ? "renderTitle()" : "renderCutscene('opening')"}">${fromTitle ? "닫기" : "오프닝 시작"}</button>
+            </div>
+            <div class="grid cols-4">
+              ${CHARACTERS.map(c => `<article class="character-card">${img(c.img, c.name)}<h3>${c.name}</h3><strong>${c.role}</strong><p>${c.desc}</p></article>`).join("")}
+            </div>
+          </div>
+        </div>`, false);
+    }
+
+    function renderCutscene(kind = "opening") {
+      state.screen = kind;
+      const scenes = kind === "opening" ? OPENING_SCENES : ENDING_SCENES;
+      if (kind === "ending") playBgm("ending");
+      const scene = scenes[state.cutIndex] || scenes[0];
+      setScreen(`
+        ${img(scene[2], "컷신", "cutscene-img")}
+        <div class="dialogue">
+          <strong class="speaker">${scene[0]}</strong>
+          <p id="typed" class="dialogue-text"></p>
+          <button onclick="nextCutscene('${kind}')">${state.cutIndex >= scenes.length - 1 ? "다음" : "계속"}</button>
+        </div>`, false);
+      typeText(scene[1]);
+    }
+    function typeText(text) {
+      const el = document.querySelector("#typed");
+      let i = 0;
+      const tick = () => {
+        if (!el) return;
+        el.textContent = text.slice(0, i++);
+        if (i <= text.length) setTimeout(tick, 22);
+      };
+      tick();
+    }
+    function nextCutscene(kind) {
+      sfx("click");
+      const scenes = kind === "opening" ? OPENING_SCENES : ENDING_SCENES;
+      state.cutIndex++;
+      if (state.cutIndex >= scenes.length) {
+        state.cutIndex = 0;
+        kind === "opening" ? renderStageIntro(STAGES[state.currentStage] || STAGES[0]) : renderClear();
+      } else renderCutscene(kind);
+    }
+
+    function renderStageIntro(stage) {
+      state.screen = "stageIntro";
+      state.currentStage = stage.id - 1;
+      state.foundClues = [];
+      save();
+      playBgm("stage");
+      setScreen(`
+        ${setBg(stage.bg)}
+        <div class="intro-scene">
+          <div class="panel side-panel">
+            <p class="small">STAGE ${stage.id} · ${stage.place}</p>
+            <h2>${stage.name}</h2>
+            <h3>${stage.topic}</h3>
+            <p class="big" style="margin-top:12px;">${stage.event}</p>
+            ${missionSteps(stage)}
+            <p style="margin-top:12px;">미래: “먼저 단서를 찾아보자. 잘못된 선택이 어디서 시작됐는지 보일 거야.”</p>
+            ${lokiHelp("단서 3개를 찾으면 도구가 켜져요. 반짝이는 곳을 차례로 눌러 보세요.")}
+            <button class="primary" style="margin-top:16px;" onclick="renderClueSearch(STAGES[${stage.id - 1}])">단서 찾기</button>
+          </div>
+          <div class="scene-area">
+            ${img(stage.monster, stage.name, "monster glitch")}
+            <div class="character-strip">${img(ASSETS.chars.mirae, "미래")}${img(ASSETS.chars.nuri, "누리")}${img(ASSETS.chars.loki, "로키")}</div>
+          </div>
+        </div>`, true);
+    }
+
+    function renderClueSearch(stage) {
+      state.screen = "clues";
+      playBgm("stage");
+      setScreen(`
+        ${setBg(stage.bg)}
+        <div class="layer hud-space stage-grid">
+          <aside class="panel side-panel">
+            <p class="small">사건 발생</p>
+            <h2>${stage.name}</h2>
+            <p>${stage.event}</p>
+            ${missionSteps(stage)}
+            <div class="tool-box ${state.foundClues.length === 3 ? "" : "locked"}">
+              ${img(stage.tool, "도구")}
+              <div><strong>${state.foundClues.length === 3 ? "도구 활성화!" : "도구 잠김"}</strong><p class="small">단서 ${state.foundClues.length}/3</p></div>
+            </div>
+            <button style="margin-top:12px;" ${state.foundClues.length === 3 ? "" : "disabled"} onclick="renderActivity(STAGES[${stage.id - 1}])">미션 해결</button>
+          </aside>
+          <section class="scene-area">
+            ${stage.hotspots.map((p, i) => `<button class="hotspot ${state.foundClues.includes(i) ? "found" : ""}" style="left:${p[0]}%; top:${p[1]}%;" aria-label="${stage.clues[i]}" onclick="collectClue(${stage.id - 1}, ${i})"></button>`).join("")}
+            ${img(stage.monster, stage.name, "monster glitch")}
+            <div class="character-strip">${img(ASSETS.chars.mirae, "미래")}${img(ASSETS.chars.nuri, "누리")}${img(ASSETS.chars.loki, "로키")}</div>
+          </section>
+          <aside class="panel side-panel">
+            <h3>단서판</h3>
+            <div class="clue-board">
+              ${stage.clues.map((c, i) => `<div class="clue">${state.foundClues.includes(i) ? "✓ " + c : "미발견 단서"}</div>`).join("")}
+            </div>
+            ${lokiHelp("반짝이는 신호를 누르고, 단서판에 어떤 단서가 모였는지 확인하세요.")}
+          </aside>
+        </div>`, true);
+    }
+    function collectClue(stageIndex, clueIndex) {
+      if (!state.foundClues.includes(clueIndex)) {
+        state.foundClues.push(clueIndex);
+        sfx("clue");
+        showToast(`단서 발견: ${STAGES[stageIndex].clues[clueIndex]}`);
+      }
+      renderClueSearch(STAGES[stageIndex]);
+    }
+    function useHint() {
+      const stage = STAGES[state.currentStage];
+      changeEnergy(-2);
+      sfx("warn");
+      const step = state.screen === "clues" ? "지금은 단서 3개를 찾는 단계예요. " : state.screen === "activity" ? "지금은 도구를 써서 카드를 알맞게 옮기는 단계예요. " : state.screen === "boss" ? "지금은 유혹 문장과 보석을 연결하는 단계예요. " : "";
+      showToast(stage ? `로키 힌트: ${step}${stage.hint}` : `로키 힌트: ${step}보석과 문장이 어떤 약속으로 이어지는지 떠올려 봐요.`);
+    }
+
+    function renderActivity(stage) {
+      state.screen = "activity";
+      const content = stage.activity.type === "sort" ? renderSortActivity(stage)
+        : stage.activity.type === "sequence" ? renderSequenceActivity(stage)
+        : stage.activity.type === "post" ? renderPostCheckActivity(stage)
+        : stage.activity.type === "chat" ? renderChatDangerActivity(stage)
+        : stage.activity.type === "comment" ? renderCommentMatchActivity(stage)
+        : renderFairnessBalanceActivity(stage);
+      setScreen(`
+        ${setBg(stage.bg)}
+        <div class="layer hud-space">
+          <div class="panel side-panel" style="height:100%;">
+            <div class="modal-head">
+              <div><p class="small">도구 활성화 · ${stage.topic}</p><h2>${stage.name} 미션</h2><p>${stage.activity.intro}</p><p class="small">${stage.activity.why || "단서를 바탕으로 바른 선택을 연습해요."}</p></div>
+              <div class="tool-box">${img(stage.tool, "활성화 도구")}<strong>작동 중</strong></div>
+            </div>
+            ${lokiHelp(stage.missionGuide)}
+            ${content}
+          </div>
+        </div>`, true);
+      initDragClick();
+    }
+
+    function renderSortActivity(stage) {
+      const a = stage.activity;
+      const cards = a.randomize ? shuffleArray(a.cards) : a.cards;
+      return `<div class="activity-layout">
+        <div><h3>카드 더미</h3><div class="card-pile">${cards.map((c, i) => {
+          const card = Array.isArray(c) ? { id: `s-${i}`, text: c[0], group: c[1] } : c;
+          return cardHtml(card.id || `s-${i}`, card.text, card.group);
+        }).join("")}</div></div>
+        <div><div class="drop-grid" style="grid-template-columns:repeat(${a.zones.length}, minmax(0, 1fr));">
+          ${a.zones.map(z => `<div class="drop-zone" data-zone="${z.id}"><div class="drop-title">${z.label}</div><div class="drop-desc">${z.desc || "알맞은 카드를 이곳에 놓으세요."}</div></div>`).join("")}
+        </div>
+        ${a.lens ? `<button style="margin-top:10px;" onclick="showToast('확인 렌즈: 출처가 없거나 오래된 정보는 다시 확인 표시가 빛나요.'); sfx('clue')">확인 렌즈 비추기</button>` : ""}
+        <button class="primary sort-check" data-required="${cards.length}" data-feedback="${stage.activity.fail || "로키: 카드가 놓인 칸의 뜻을 다시 생각해 봐요."}" style="margin-top:10px;" onclick="checkSortActivity(STAGES[${stage.id - 1}])" ${stage.monsterId === "kaemutmon" ? "disabled" : ""}>분류 완료</button></div>
+      </div>`;
+    }
+    function renderScanActivity(stage) { return renderSortActivity(stage); }
+    function cardHtml(id, text, answer, extra = "") {
+      return `<div class="card" draggable="true" data-card="${id}" data-answer="${answer}" ${extra} tabindex="0">${text}</div>`;
+    }
+    function initDragClick() {
+      document.querySelectorAll(".card").forEach(card => {
+        card.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", card.dataset.card);
+          state.selectedCard = card;
+          card.classList.add("selected");
+        });
+        card.addEventListener("dragend", () => card.classList.remove("selected"));
+        card.addEventListener("click", () => {
+          document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+          state.selectedCard = card;
+          card.classList.add("selected");
+        });
+      });
+      document.querySelectorAll(".drop-zone").forEach(zone => {
+        zone.addEventListener("dragover", e => e.preventDefault());
+        zone.addEventListener("drop", e => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData("text/plain");
+          const card = document.querySelector(`[data-card="${id}"]`);
+          if (card) moveCard(card, zone);
+        });
+        zone.addEventListener("click", () => {
+          if (state.selectedCard) moveCard(state.selectedCard, zone);
+        });
+      });
+    }
+    function moveCard(card, zone) {
+      zone.appendChild(card);
+      card.classList.add("moved");
+      const isCorrect = zone.dataset.zone === card.dataset.answer || zone.dataset.match === card.dataset.answer;
+      card.classList.toggle("placed-correct", isCorrect);
+      if (!isCorrect && (zone.dataset.zone || zone.dataset.match)) {
+        zone.classList.add("shake");
+        setTimeout(() => zone.classList.remove("shake"), 360);
+        showToast(document.querySelector(".sort-check")?.dataset.feedback || "로키: 이 카드가 어떤 기준에 맞는지 다시 생각해 봐요.");
+      }
+      card.classList.remove("selected");
+      state.selectedCard = null;
+      sfx("click");
+      updateActivityReady();
+    }
+    function updateActivityReady() {
+      const btn = document.querySelector(".sort-check");
+      if (!btn) return;
+      const required = Number(btn.dataset.required || 0);
+      const cards = [...document.querySelectorAll(".card[data-answer]")];
+      const placed = cards.filter(card => card.closest(".drop-zone")).length;
+      const allCorrect = cards.every(card => {
+        const zone = card.closest(".drop-zone");
+        return zone && (zone.dataset.zone === card.dataset.answer || zone.dataset.match === card.dataset.answer);
+      });
+      btn.disabled = placed < required || !allCorrect;
+    }
+    function checkSortActivity(stage) {
+      let ok = true;
+      document.querySelectorAll(".card").forEach(card => {
+        const zone = card.closest(".drop-zone");
+        if (!zone || zone.dataset.zone !== card.dataset.answer) ok = false;
+      });
+      ok ? successActivity(stage) : failActivity(stage.activity.fail || "로키: 카드가 놓인 칸의 제목을 다시 읽어 보세요.");
+    }
+
+    function renderSequenceActivity(stage) {
+      const a = stage.activity;
+      const shuffled = shuffleArray(a.order);
+      return `<div class="activity-layout">
+        <div><h3>대응 카드</h3><div class="card-pile">${shuffled.map((c, i) => cardHtml(`q-${i}`, c, String(a.order.indexOf(c)))).join("")}</div></div>
+        <div>
+          <h3>대응 순서</h3>
+          <div class="sequence-list">${a.order.map((_, i) => `<div class="drop-zone sequence-slot" data-zone="${i}">${i + 1}단계</div>`).join("")}</div>
+          <h3 style="margin-top:12px;">위로 문장</h3>
+          <div class="choice-row">${a.choices.map(c => `<button class="choice" data-choice="${c}" onclick="selectChoice(this)">${c}</button>`).join("")}</div>
+          <button class="primary" style="margin-top:12px;" onclick="checkSequenceActivity(STAGES[${stage.id - 1}])">대응 완료</button>
+        </div>
+      </div>`;
+    }
+    function selectChoice(btn) {
+      document.querySelectorAll(".choice").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      sfx("click");
+    }
+    function checkSequenceActivity(stage) {
+      let ok = true;
+      document.querySelectorAll(".card").forEach(card => {
+        const zone = card.closest(".drop-zone");
+        if (!zone || zone.dataset.zone !== card.dataset.answer) ok = false;
+      });
+      const picked = document.querySelector(".choice.selected")?.dataset.choice;
+      if (picked !== stage.activity.answer) ok = false;
+      ok ? successActivity(stage) : failActivity("로키: 먼저 퍼뜨리지 않고, 친구를 안심시키는 흐름을 떠올려 봐요.");
+    }
+
+    function renderPostCheckActivity(stage) {
+      const a = stage.activity;
+      return `<div class="grid" style="grid-template-columns:1fr 1fr;">
+        ${a.posts.map((p, i) => `<div class="info-card" data-post="${i}"><h3>게시글 ${i + 1}</h3><p>${p.text}</p><div class="choice-row" style="margin-top:10px;">${a.actions.map(ac => `<button class="choice" data-post-choice="${i}" data-action="${ac}" onclick="pickPostAction(this)">${ac}</button>`).join("")}</div></div>`).join("")}
+        <div><button class="primary" onclick="checkPostCheckActivity(STAGES[${stage.id - 1}])">게시판 정리</button></div>
+      </div>`;
+    }
+    function pickPostAction(btn) {
+      document.querySelectorAll(`[data-post-choice="${btn.dataset.postChoice}"]`).forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      sfx("click");
+    }
+    function checkPostCheckActivity(stage) {
+      const ok = stage.activity.posts.every((p, i) => {
+        const picked = document.querySelector(`[data-post-choice="${i}"].selected`)?.dataset.action;
+        return p.answers.includes(picked);
+      });
+      ok ? successActivity(stage) : failActivity("로키: 빠른 공유보다 확인과 도움 요청이 먼저예요.");
+    }
+
+    function renderChatDangerActivity(stage) {
+      const a = stage.activity;
+      return `<div class="activity-layout">
+        <div><h3>채팅창</h3><div class="chat-list">${a.lines.map(line => `<button class="chat-line" data-line="${line}" onclick="this.classList.toggle('marked'); sfx('click')">${line}</button>`).join("")}</div></div>
+        <div><h3>안전 행동</h3><div class="choice-row">${a.safeActions.map(act => `<button class="choice" data-safe="${act}" onclick="this.classList.toggle('selected'); sfx('click')">${act}</button>`).join("")}</div>
+        <button class="primary" style="margin-top:12px;" onclick="checkChatDangerActivity(STAGES[${stage.id - 1}])">안전 신호 보내기</button></div>
+      </div>`;
+    }
+    function checkChatDangerActivity(stage) {
+      const marked = [...document.querySelectorAll(".chat-line.marked")].map(x => x.dataset.line).sort();
+      const danger = [...stage.activity.danger].sort();
+      const safeCount = document.querySelectorAll("[data-safe].selected").length;
+      const ok = marked.length === danger.length && marked.every((v, i) => v === danger[i]) && safeCount === stage.activity.safeActions.length;
+      ok ? successActivity(stage) : failActivity("로키: 비밀, 사진, 주소, 비밀번호, 선물 요구는 모두 위험 신호예요.");
+    }
+
+    function renderCommentMatchActivity(stage) {
+      const a = stage.activity;
+      const answers = shuffleArray(a.pairs.map(p => p[1]));
+      return `<div class="grid">
+        <div class="grid cols-2">
+          <div><h3>상처 댓글</h3>${a.pairs.map((p, i) => `<div class="card match-source" data-source="${i}">${p[0]}</div>`).join("")}</div>
+          <div><h3>배려 댓글 선택</h3>${a.pairs.map((p, i) => `<div class="drop-zone" data-match="${i}"><strong>${p[0]}</strong></div>`).join("")}</div>
+        </div>
+        <div><h3>배려 댓글 카드</h3><div class="card-pile">${answers.map((text, i) => cardHtml(`m-${i}`, text, String(a.pairs.findIndex(p => p[1] === text)))).join("")}</div></div>
+        <div><h3>댓글 전 확인</h3><div class="filter-row">${a.filters.map(f => `<button onclick="this.classList.toggle('done'); sfx('click')">${f}</button>`).join("")}</div><button class="primary" style="margin-top:12px;" onclick="checkCommentMatchActivity(STAGES[${stage.id - 1}])">말풍선 정화</button></div>
+      </div>`;
+    }
+    function checkCommentMatchActivity(stage) {
+      let ok = true;
+      document.querySelectorAll(".card[data-answer]").forEach(card => {
+        const zone = card.closest(".drop-zone");
+        if (!zone || zone.dataset.match !== card.dataset.answer) ok = false;
+      });
+      if (document.querySelectorAll(".filter-row button.done").length !== stage.activity.filters.length) ok = false;
+      ok ? successActivity(stage) : failActivity("로키: 상처를 줄이는 말과 댓글 전 확인 3가지를 함께 완성해요.");
+    }
+
+    function renderFairnessBalanceActivity(stage) {
+      const a = stage.activity;
+      const cards = shuffleArray([...a.unfair, ...a.fair]);
+      return `<div class="activity-layout">
+        <div><h3>기준 카드</h3><div class="card-pile">
+          ${cards.map((c, i) => cardHtml(c.id || `fair-${i}`, c.text, c.type === "unfair" ? "remove" : "scale", `data-type="${c.type}"`)).join("")}
+        </div></div>
+        <div class="drop-grid cols-2">
+          <div class="drop-zone" data-zone="remove"><div class="drop-title">문제 기준 제거함</div><div class="drop-desc">실력과 상관없는 불공정 기준</div></div>
+          <div class="drop-zone" data-zone="scale"><div class="drop-title">공정 저울</div><div class="drop-desc">모두에게 기회가 있는 기준</div></div>
+          <button class="primary sort-check" data-required="${cards.length}" data-feedback="${stage.activity.fail}" onclick="checkFairnessBalanceActivity(STAGES[${stage.id - 1}])" disabled>저울 맞추기</button>
+        </div>
+      </div>`;
+    }
+    function checkFairnessBalanceActivity(stage) { checkSortActivity(stage); }
+
+    function failActivity(message) {
+      sfx("bad");
+      changeEnergy(-5);
+      document.querySelector(".panel")?.classList.add("shake");
+      setTimeout(() => document.querySelector(".panel")?.classList.remove("shake"), 420);
+      showToast(message);
+    }
+    function successActivity(stage) {
+      sfx("good");
+      changeEnergy(5);
+      document.querySelector(".panel")?.classList.add("sparkle");
+      showToast(stage.success);
+      setTimeout(() => renderPurify(stage), 900);
+    }
+
+    function renderPurify(stage) {
+      state.screen = "purify";
+      sfx("purify");
+      setScreen(`
+        ${setBg(stage.bg)}
+        <div class="purify-scene">
+          <div class="panel side-panel">
+            <p class="small">몬스터 정화</p>
+            <h2>${stage.name}</h2>
+            <p class="big">${stage.purify}</p>
+            <button class="primary" style="margin-top:16px;" onclick="renderGemReward(STAGES[${stage.id - 1}])">보석 받기</button>
+          </div>
+          ${img(stage.purified, `${stage.name} 정화`, "hero-img sparkle")}
+        </div>
+        <div class="flash"></div><div class="particles">${makeParticles()}</div>`, true);
+    }
+    function makeParticles() {
+      return Array.from({ length: 32 }, (_, i) => `<span class="particle" style="left:${45 + Math.random()*16}%; top:${42 + Math.random()*18}%; --x:${(Math.random()*2-1)*420}px; --y:${(Math.random()*2-1)*260}px;"></span>`).join("");
+    }
+    function renderGemReward(stage) {
+      if (!state.collectedGems.includes(stage.gemName)) state.collectedGems.push(stage.gemName);
+      if (!state.dogam.includes(stage.monsterId)) state.dogam.push(stage.monsterId);
+      changeEnergy(5);
+      save();
+      sfx("gem");
+      setScreen(`
+        ${setBg(stage.bg)}
+        <div class="reward-scene">
+          <div class="panel side-panel">
+            <p class="small">보석 획득 · 도감 등록</p>
+            <h2>${stage.gemName}</h2>
+            <p class="big">${stage.success}</p>
+            <p style="margin-top:10px;">초혁신 박사: “좋네. ${stage.topic}의 약속이 학교의 신뢰 에너지를 회복시켰어.”</p>
+            <button class="primary" style="margin-top:16px;" onclick="nextStage()">다음으로</button>
+          </div>
+          <div style="text-align:center;">
+            ${img(ASSETS.ui.gemGet, "보석 획득", "subtitle-img")}
+            ${img(stage.gem, stage.gemName, "hero-img sparkle")}
+          </div>
+        </div>`, true);
+    }
+    function nextStage() {
+      sfx("trans");
+      if (state.currentStage + 1 >= STAGES.length) renderBoss();
+      else renderStageIntro(STAGES[state.currentStage + 1]);
+    }
+
+    function renderDogam(inGame = false) {
+      sfx("click");
+      const dogamCard = (stage) => {
+        const unlocked = state.dogam.includes(stage.monsterId);
+        if (!unlocked) {
+          return `<article class="dogam-card locked">
+            <div class="dogam-art single">${img(stage.monster, "잠긴 몬스터")}</div>
+            <div class="dogam-info"><h3>잠김</h3><p>아직 정화하지 않았어요.</p><p class="small">단서를 찾고 미션을 해결하면 등록됩니다.</p></div>
+          </article>`;
+        }
+        return `<article class="dogam-card">
+          <div class="dogam-art">${img(stage.monster, `${stage.name} 정화 전`)}${img(stage.purified, `${stage.name} 정화 후`)}</div>
+          <div class="dogam-info">
+            <h3>${stage.name}</h3>
+            <p><strong>주제:</strong> ${stage.topic}</p>
+            <p><strong>획득 보석:</strong> ${stage.gemName}</p>
+            <p><strong>문제 행동:</strong> ${stage.event}</p>
+            <p><strong>정화 방법:</strong> ${stage.success}</p>
+          </div>
+        </article>`;
+      };
+      const cards = STAGES.map(stage => {
+        return dogamCard(stage);
+      }).join("") + `<article class="dogam-card ${state.dogam.includes("dima") ? "" : "locked"}">${state.dogam.includes("dima") ? `<div class="dogam-art">${img(BOSS_DATA.normal, "디마 정화 전")}${img(BOSS_DATA.purified, "디마 정화 후")}</div><div class="dogam-info"><h3>디마</h3><p><strong>주제:</strong> 모든 디지털 윤리 약속</p><p><strong>획득 보석:</strong> 8개 윤리 보석</p><p><strong>문제 행동:</strong> 여러 유혹 문장으로 판단을 흐리게 함</p><p><strong>정화 방법:</strong> 알맞은 보석을 연결해 약속을 되찾기</p></div>` : `<div class="dogam-art single">${img(BOSS_DATA.normal, "잠긴 디마")}</div><div class="dogam-info"><h3>최종 보스</h3><p>아직 정화하지 않았어요.</p><p class="small">디마는 최종 클리어 후 등록됩니다.</p></div>`}</article>`;
+      setScreen(`
+        ${setBg(ASSETS.bg.schoolNormal)}
+        <div class="modal">
+          <div class="modal-body panel">
+            <div class="modal-head"><div>${img(ASSETS.ui.dogamTitle, "몬스터 도감", "subtitle-img")}<h2>몬스터 도감</h2></div><button onclick="closeDogam(${inGame})">닫기</button></div>
+            <div class="dogam-grid">${cards}</div>
+          </div>
+        </div>`, inGame);
+    }
+
+    function closeDogam(inGame) {
+      if (!inGame) return renderTitle();
+      if (state.currentStage >= STAGES.length) return renderBoss();
+      return renderClueSearch(STAGES[state.currentStage]);
+    }
+
+    function renderBoss() {
+      state.screen = "boss";
+      state.currentStage = STAGES.length;
+      state.bossDone = [];
+      state.bossDeclared = [];
+      playBgm("boss");
+      save();
+      const temptations = shuffleArray(BOSS_DATA.matches);
+      const gems = STAGES.map(s => ({ key: gemKeyForStage(s), name: s.gemName, img: s.gem }));
+      setScreen(`
+        ${setBg(BOSS_DATA.bg)}
+        <div class="layer hud-space boss-grid">
+          <aside class="panel side-panel">
+            <p class="small">FINAL · 디마의 탑</p>
+            <h2>디마</h2>
+            <p>${BOSS_DATA.missionGuide}</p>
+            ${lokiHelp("문장마다 어떤 디지털 윤리 약속이 필요한지 생각하고 보석을 연결하세요.")}
+            ${img(BOSS_DATA.normal, "디마", "hero-img glitch")}
+            <div class="gem-row">${gems.map(g => `<div class="card" data-card="gem-${g.key}" data-gem-key="${g.key}" data-answer="${g.key}" draggable="true">${img(g.img, g.name, "gem-token")}<span>${g.name}</span></div>`).join("")}</div>
+          </aside>
+          <section class="panel side-panel">
+            <h3>유혹 문장</h3>
+            <p class="small">문장 순서는 매번 바뀝니다. 보석 이름이 아니라 약속의 뜻을 떠올려 보세요.</p>
+            <div class="tempt-list">${temptations.map(t => `<div class="drop-zone" data-boss="${t.id}" data-gem-key="${t.gemKey}" data-zone="${t.gemKey}"><strong>${t.text}</strong><p class="promise" hidden>${t.promise}</p></div>`).join("")}</div>
+            <button class="primary" style="margin-top:12px;" onclick="checkBossGemPuzzle()">보석 공명 확인</button>
+          </section>
+        </div>`, true);
+      initDragClick();
+    }
+    function renderBossGemPuzzle() { renderBoss(); }
+    function checkBossGemPuzzle() {
+      let ok = true;
+      document.querySelectorAll("[data-boss]").forEach(zone => {
+        const card = zone.querySelector(".card");
+        const matched = card && card.dataset.gemKey === zone.dataset.gemKey;
+        if (!matched) ok = false;
+        zone.classList.toggle("good-flash", !!matched);
+        const promise = zone.querySelector(".promise");
+        if (promise) promise.hidden = !matched;
+      });
+      if (!ok) return failActivity("로키: 보석 이름과 유혹 문장의 문제를 서로 맞춰 봐요.");
+      sfx("purify");
+      state.bossDone = BOSS_DATA.matches.map(m => m.id);
+      setScreen(`
+        ${setBg(BOSS_DATA.bg)}
+        <div class="purify-scene">
+          <div class="panel side-panel">
+            <p class="small">디마 약화</p><h2>윤리 약속이 빛납니다</h2>
+            ${BOSS_DATA.matches.map(m => `<p class="promise">✓ ${m.promise}</p>`).join("")}
+            <button class="primary" style="margin-top:14px;" onclick="renderDeclaration()">최종 선언문 채우기</button>
+          </div>
+          ${img(BOSS_DATA.weak, "약해진 디마", "hero-img sparkle")}
+        </div><div class="flash"></div>`, true);
+    }
+    function renderDeclaration() {
+      const shuffled = shuffleArray(BOSS_DATA.declaration);
+      setScreen(`
+        ${setBg(BOSS_DATA.bg)}
+        <div class="layer hud-space">
+          <div class="panel modal-body" style="margin:auto;">
+            <h2>최종 선언문</h2>
+            <p class="big">우리는 디지털 데몬 헌터스!</p>
+            <div class="declaration">
+              ${BOSS_DATA.declaration.map((_, i) => `<button class="blank-btn" data-blank="${i}" onclick="fillBlank(this)">빈칸 ${i + 1}</button>`).join("")}
+            </div>
+            <h3>문장 조각</h3>
+            <div class="choice-row">${shuffled.map(txt => `<button class="choice" data-frag="${txt}" onclick="selectFragment(this)">${txt}</button>`).join("")}</div>
+            <button class="primary" style="margin-top:14px;" onclick="checkDeclaration()">선언하기</button>
+          </div>
+        </div>`, true);
+    }
+    let selectedFragment = null;
+    function selectFragment(btn) {
+      document.querySelectorAll("[data-frag]").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedFragment = btn.dataset.frag;
+      sfx("click");
+    }
+    function fillBlank(btn) {
+      if (!selectedFragment) return showToast("먼저 문장 조각을 선택하세요.");
+      btn.textContent = selectedFragment;
+      btn.dataset.value = selectedFragment;
+      btn.classList.add("filled");
+      selectedFragment = null;
+      document.querySelectorAll("[data-frag]").forEach(b => b.classList.remove("selected"));
+      sfx("click");
+    }
+    function checkDeclaration() {
+      const ok = BOSS_DATA.declaration.every((text, i) => document.querySelector(`[data-blank="${i}"]`)?.dataset.value === text);
+      if (!ok) return failActivity("로키: 선언문은 자연스럽게 이어지는 약속의 순서로 채워 보세요.");
+      if (!state.dogam.includes("dima")) state.dogam.push("dima");
+      state.energy = 100;
+      save();
+      setScreen(`
+        ${setBg(BOSS_DATA.bg)}
+        <div class="purify-scene">
+          <div class="panel side-panel"><p class="small">디마 정화</p><h2>학교의 신뢰가 돌아왔습니다</h2><p class="big">디마가 작은 디지털 친구처럼 환하게 변했어요.</p><button class="primary" style="margin-top:16px;" onclick="state.cutIndex=0; renderCutscene('ending')">엔딩 보기</button></div>
+          ${img(BOSS_DATA.purified, "정화된 디마", "hero-img sparkle")}
+        </div><div class="flash"></div><div class="particles">${makeParticles()}</div>`, true);
+    }
+
+    function renderEnding() { state.cutIndex = 0; renderCutscene("ending"); }
+    function renderClear() {
+      state.screen = "clear";
+      playBgm("ending");
+      setScreen(`
+        ${setBg(ASSETS.bg.schoolRestored)}
+        <div class="clear-scene">
+          <div class="panel side-panel">
+            ${img(ASSETS.ui.clear, "게임 클리어", "subtitle-img")}
+            <h2>${state.nickname || "헌터"} 임무 성공!</h2>
+            <p class="big">AI보다 강한 힘은 바르게 판단하는 마음입니다.</p>
+            <p>정화한 몬스터 ${state.dogam.length}/9</p>
+            <div class="gem-row" style="margin:12px 0;">${STAGES.map(s => img(s.gem, s.gemName, "gem-token")).join("")}</div>
+            <div class="choice-row"><button class="primary" onclick="restart()">다시 하기</button><button onclick="renderDogam(false)">몬스터 도감 보기</button><button onclick="renderTitle()">처음으로</button></div>
+          </div>
+          <div class="panel side-panel">
+            <h3>오늘의 약속</h3>
+            <p>디지털 윤리는 어려운 규칙이 아니라, 나와 친구를 지키는 힘입니다.</p>
+            <div class="grid cols-3" style="margin-top:12px;">${STAGES.map(s => img(s.purified, `${s.name} 정화`)).join("")}</div>
+          </div>
+        </div>`, false);
+    }
+    function restart() {
+      localStorage.removeItem("ddh_energy");
+      localStorage.removeItem("ddh_stage");
+      localStorage.removeItem("ddh_gems");
+      localStorage.removeItem("ddh_dogam");
+      state.energy = 70;
+      state.currentStage = 0;
+      state.collectedGems = [];
+      state.dogam = [];
+      state.foundClues = [];
+      renderTitle();
+    }
+
+    window.addEventListener("keydown", e => {
+      if (e.key === "Escape") renderTitle();
+    });
+    renderTitle();
+  </script>
+</body>
+</html>
