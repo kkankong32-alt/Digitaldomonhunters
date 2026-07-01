@@ -586,22 +586,34 @@
       .hud-chip { padding: 5px 7px; }
       .energy-bar { width: 80px; }
     }
-    @media (orientation: landscape) and (max-height: 520px) {
+    @media (orientation: landscape) and (max-height: 620px) {
       #app { padding: 0; height: 100dvh; }
       #game {
-        width: min(100vw, calc(100dvh * 16 / 9));
-        height: min(100dvh, calc(100vw * 9 / 16));
+        width: 100vw;
+        height: 100dvh;
         min-width: 0;
         min-height: 0;
         border-radius: 0;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
       .screen, .screen.active {
+        position: absolute;
+        inset: 0;
         overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
-      .layer { padding: 6px; }
+      .layer {
+        position: relative;
+        inset: auto;
+        min-height: 100%;
+        height: auto;
+        padding: 6px;
+        overflow: visible;
+      }
       .hud-space { padding-top: 38px; }
       #hud { top: 3px; left: 4px; right: 4px; min-height: 31px; padding: 3px 5px; gap: 3px; }
       .hud-chip { min-height: 22px; padding: 3px 5px; gap: 3px; font-size: 10px; }
@@ -613,7 +625,16 @@
       .small { font-size: 10px; }
       .title-logo { width: min(44vw, 360px); max-height: 21vh; }
       .subtitle-img { width: min(30vw, 260px); max-height: 8vh; }
-      .title-layout { gap: 6px; }
+      .title-layout {
+        height: auto;
+        min-height: 100%;
+        justify-content: flex-start;
+        gap: 6px;
+        padding-top: 10px;
+        padding-bottom: 54px;
+        overflow: visible;
+      }
+      .title-actions { max-width: 92vw; gap: 6px; }
       .name-box { width: min(42vw, 330px); padding: 7px; }
       input { padding: 6px 8px; }
       button { padding: 6px 9px; }
@@ -635,7 +656,7 @@
         grid-template-columns: .92fr 1.08fr !important;
         gap: 8px;
         height: auto;
-        min-height: 100%;
+        min-height: calc(100dvh - 6px);
         padding: 42px 8px 8px;
         align-items: stretch;
       }
@@ -665,6 +686,12 @@
       .drop-title { font-size: 11px; }
       .drop-desc, .tap-guide { font-size: 9px; }
       .modal { padding: 8px; }
+      .modal {
+        position: fixed;
+        align-items: start;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       .modal-body { width: 96vw; max-height: 88dvh; padding: 10px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
       .modal-head { margin-bottom: 8px; }
       .dogam-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
