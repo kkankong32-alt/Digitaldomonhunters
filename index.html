@@ -25,7 +25,7 @@
 
     * { box-sizing: border-box; }
     img { max-width: 100%; height: auto; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; overflow-x: hidden; background: #07111f; color: var(--ink); }
+    html, body { width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden; overflow-x: hidden; background: #07111f; color: var(--ink); }
     body {
       background:
         radial-gradient(circle at 18% 12%, rgba(107, 232, 255, .12), transparent 26%),
@@ -58,13 +58,16 @@
     #app {
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
       display: grid;
       place-items: center;
       padding: min(2vh, 14px);
     }
     #game {
       width: min(100vw, calc(100vh * 16 / 9));
+      width: min(100vw, calc(100dvh * 16 / 9));
       height: min(100vh, calc(100vw * 9 / 16));
+      height: min(100dvh, calc(100vw * 9 / 16));
       min-width: 320px;
       min-height: 180px;
       position: relative;
@@ -583,6 +586,77 @@
       .hud-chip { padding: 5px 7px; }
       .energy-bar { width: 80px; }
     }
+    @media (orientation: landscape) and (max-height: 520px) {
+      #app { padding: 0; height: 100dvh; }
+      #game {
+        width: min(100vw, calc(100dvh * 16 / 9));
+        height: min(100dvh, calc(100vw * 9 / 16));
+        min-width: 0;
+        min-height: 0;
+        border-radius: 0;
+      }
+      .layer { padding: 6px; }
+      .hud-space { padding-top: 38px; }
+      #hud { top: 3px; left: 4px; right: 4px; min-height: 31px; padding: 3px 5px; gap: 3px; }
+      .hud-chip { min-height: 22px; padding: 3px 5px; gap: 3px; font-size: 10px; }
+      .energy-bar { width: 54px; height: 7px; }
+      #hud button { padding: 3px 5px; min-width: 26px; font-size: 10px; }
+      h2 { font-size: 17px; }
+      h3 { font-size: 13px; }
+      p, li, .big { font-size: 11px; line-height: 1.28; }
+      .small { font-size: 10px; }
+      .title-logo { width: min(44vw, 360px); max-height: 21vh; }
+      .subtitle-img { width: min(30vw, 260px); max-height: 8vh; }
+      .title-layout { gap: 6px; }
+      .name-box { width: min(42vw, 330px); padding: 7px; }
+      input { padding: 6px 8px; }
+      button { padding: 6px 9px; }
+      .credit { bottom: 14px; font-size: 12px; }
+      .stage-grid {
+        grid-template-columns: .76fr 1.42fr .82fr !important;
+        gap: 6px;
+        overflow: hidden !important;
+      }
+      .activity-layout, .boss-grid {
+        grid-template-columns: .82fr 1.18fr !important;
+        gap: 7px;
+        height: 100%;
+      }
+      .intro-scene, .purify-scene, .reward-scene, .clear-scene {
+        grid-template-columns: .92fr 1.08fr !important;
+        gap: 8px;
+        padding: 8px;
+      }
+      .side-panel { padding: 7px; max-height: none !important; }
+      .mission-guide { margin-top: 6px; padding: 7px; gap: 3px; }
+      .mission-guide ol { padding-left: 16px; }
+      .loki-help { grid-template-columns: 34px 1fr; margin-top: 6px; padding: 6px; gap: 6px; }
+      .loki-help img { width: 34px; height: 34px; }
+      .scene-area { padding: 10px; }
+      .monster { width: min(25vw, 190px) !important; height: min(42vh, 190px) !important; right: 1%; bottom: 1%; }
+      .character-strip img { width: min(6vw, 42px); max-height: 18vh; }
+      .hotspot { width: 36px; height: 36px; }
+      .clue-board { gap: 4px; margin-top: 6px; }
+      .clue { padding: 5px 6px; font-size: 10px; }
+      .tool-box { margin-top: 6px; padding: 6px; gap: 6px; }
+      .tool-box img, .gem-img { width: 38px; height: 38px; }
+      .card-pile { gap: 5px; }
+      .card { width: min(100%, 170px); min-height: 36px; padding: 6px 7px; font-size: 10px; }
+      .drop-grid { gap: 5px; }
+      .drop-zone { min-height: 70px; padding: 6px; gap: 4px; }
+      .drop-title { font-size: 11px; }
+      .drop-desc, .tap-guide { font-size: 9px; }
+      .modal { padding: 8px; }
+      .modal-body { width: 96vw; max-height: 88dvh; padding: 10px; }
+      .modal-head { margin-bottom: 8px; }
+      .dogam-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+      .dogam-art, .dogam-art img, .dogam-card img { height: 105px; }
+      .dogam-info { padding: 7px; gap: 4px; }
+      .dogam-info p { font-size: 10px; line-height: 1.22; }
+      .gem-title-img { width: min(320px, 48vw); max-height: 14vh; }
+      .gem-reward-gem { width: min(300px, 42vw); max-height: 52vh; }
+      #toast { bottom: 10%; font-size: 11px; padding: 8px 10px; }
+    }
   </style>
 </head>
 <body>
@@ -991,6 +1065,7 @@
         <span class="hud-spacer"></span>
         <button title="로키 힌트" onclick="useHint()">?</button>
         <button title="몬스터 도감" onclick="renderDogam(true)">도감</button>
+        <button title="전체화면 전환" onclick="toggleFullscreenMode()">${document.fullscreenElement ? "창모드" : "전체"}</button>
         <button title="사운드" onclick="toggleSound()">${state.sound ? "음 ON" : "음 OFF"}</button>
         <button title="처음으로" onclick="renderTitle()">처음</button>`;
     }
@@ -1086,6 +1161,7 @@
             <button onclick="renderGuide()">방법 보기</button>
             <button onclick="renderCharacterIntro(true)">캐릭터 소개</button>
             <button onclick="renderDogam(false)">몬스터 도감</button>
+            <button onclick="requestFullscreenMode()">전체화면</button>
             <button onclick="toggleTitleSound()">사운드 ${state.sound ? "ON" : "OFF"}</button>
           </div>
           <p class="credit">made by 김종훈</p>
@@ -1099,9 +1175,38 @@
       save();
       renderTitle();
     }
+    async function requestFullscreenMode() {
+      try {
+        const el = document.documentElement;
+        if (!document.fullscreenElement && el.requestFullscreen) {
+          await el.requestFullscreen({ navigationUI: "hide" });
+        } else if (document.body.webkitRequestFullscreen) {
+          document.body.webkitRequestFullscreen();
+        }
+      } catch (e) {
+        showToast("이 브라우저에서는 전체화면 버튼을 한 번 더 눌러야 할 수 있어요.");
+      }
+      try {
+        if (screen.orientation?.lock) await screen.orientation.lock("landscape");
+      } catch (e) {}
+      setTimeout(() => window.scrollTo(0, 1), 120);
+    }
+    async function toggleFullscreenMode() {
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else {
+          await requestFullscreenMode();
+        }
+      } catch (e) {
+        showToast("전체화면 전환을 다시 눌러 주세요.");
+      }
+      renderHud();
+    }
     function startGame() {
       ensureAudio();
       sfx("click");
+      requestFullscreenMode();
       playBgm("main");
       state.nickname = document.querySelector("#nickname")?.value.trim() || "별빛헌터";
       state.currentStage = 0;
@@ -1739,6 +1844,9 @@
 
     window.addEventListener("keydown", e => {
       if (e.key === "Escape") renderTitle();
+    });
+    document.addEventListener("fullscreenchange", () => {
+      if (hud.classList.contains("show")) renderHud();
     });
     renderTitle();
   </script>
