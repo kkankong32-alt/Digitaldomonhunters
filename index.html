@@ -18,6 +18,8 @@
       --bad: #ff6b7a;
       --good: #77ffbf;
       --shadow: 0 18px 60px rgba(0, 0, 0, .45);
+      --credit-bottom: 30px;
+      --credit-font-size: 15px;
       font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
     }
 
@@ -142,7 +144,14 @@
       background: rgba(255,255,255,.92);
       color: #06101d;
     }
-    .credit { position: absolute; left: 20px; bottom: 12px; color: rgba(245,251,255,.75); font-size: 12px; }
+    .credit {
+      position: absolute;
+      left: 24px;
+      bottom: var(--credit-bottom);
+      color: rgba(245,251,255,.82);
+      font-size: var(--credit-font-size);
+      text-shadow: 0 2px 14px rgba(0,0,0,.55);
+    }
 
     #hud {
       position: absolute;
@@ -275,7 +284,7 @@
       align-items: stretch;
     }
     .side-panel { padding: 14px; overflow: auto; }
-    .scene-area { position: relative; min-height: 100%; border: 1px solid rgba(107,232,255,.22); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,.16); }
+    .scene-area { position: relative; min-height: 100%; border: 1px solid rgba(107,232,255,.22); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,.16); padding: 10px; }
     .monster {
       position: absolute;
       right: 3%;
@@ -303,18 +312,41 @@
     .character-strip img { width: min(9vw, 100px); max-height: 26vh; object-fit: contain; filter: drop-shadow(0 12px 18px rgba(0,0,0,.48)); }
     .hotspot {
       position: absolute;
-      width: 38px;
-      height: 38px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
-      border: 2px solid rgba(184, 255, 107, .72);
-      background: radial-gradient(circle, rgba(184,255,107,.88), rgba(107,232,255,.14) 55%, transparent 70%);
-      box-shadow: 0 0 18px rgba(184,255,107,.52);
+      border: 1px solid rgba(184, 255, 107, .82);
+      background:
+        linear-gradient(90deg, transparent 46%, rgba(255,255,255,.65) 48%, rgba(255,255,255,.65) 52%, transparent 54%),
+        linear-gradient(0deg, transparent 46%, rgba(255,255,255,.65) 48%, rgba(255,255,255,.65) 52%, transparent 54%),
+        radial-gradient(circle, rgba(184,255,107,.72), rgba(107,232,255,.16) 48%, transparent 70%);
+      box-shadow: 0 0 18px rgba(184,255,107,.52), inset 0 0 14px rgba(107,232,255,.38);
       cursor: pointer;
       animation: pulse 1.4s ease-in-out infinite;
       z-index: 6;
     }
-    .hotspot.found { opacity: .28; pointer-events: none; filter: grayscale(.4); }
+    .hotspot::before, .hotspot::after {
+      content: "";
+      position: absolute;
+      inset: -7px;
+      border-radius: 50%;
+      border: 1px solid rgba(107,232,255,.56);
+      animation: scanRing 1.8s ease-out infinite;
+    }
+    .hotspot::after { inset: -13px; animation-delay: .45s; opacity: .55; }
+    .hotspot:hover, .hotspot:focus-visible { transform: scale(1.14); box-shadow: 0 0 28px rgba(184,255,107,.8), 0 0 42px rgba(107,232,255,.34); }
+    .hotspot.found {
+      opacity: .82;
+      pointer-events: none;
+      filter: none;
+      background: radial-gradient(circle, rgba(119,255,191,.9), rgba(107,232,255,.18) 56%, transparent 72%);
+      animation: clueFound .7s ease forwards;
+    }
+    .hotspot.found::before { content: "✓"; inset: 0; display: grid; place-items: center; border: 0; color: #06101d; font-weight: 900; font-size: 24px; animation: none; }
+    .hotspot.found::after { border-color: rgba(119,255,191,.75); animation: scanRing .8s ease-out 1; }
     @keyframes pulse { 0%,100% { transform: scale(.92); } 50% { transform: scale(1.1); } }
+    @keyframes scanRing { from { transform: scale(.72); opacity: .9; } to { transform: scale(1.45); opacity: 0; } }
+    @keyframes clueFound { 0% { transform: scale(1.25); } 100% { transform: scale(1); } }
     .clue-board { display: grid; gap: 8px; margin-top: 12px; }
     .clue {
       padding: 9px 10px;
@@ -325,6 +357,8 @@
     .tool-box { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 10px; border: 1px dashed rgba(184,255,107,.42); border-radius: 8px; }
     .tool-box img, .gem-img { width: 58px; height: 58px; object-fit: contain; }
     .tool-box.locked { opacity: .48; filter: grayscale(.65); }
+    .tool-box.active-tool { border-color: rgba(184,255,107,.82); box-shadow: 0 0 24px rgba(184,255,107,.24); background: rgba(184,255,107,.08); }
+    .tool-box.active-tool img { filter: drop-shadow(0 0 16px rgba(184,255,107,.7)); }
 
     .activity-layout {
       display: grid;
@@ -362,6 +396,13 @@
       border-color: rgba(184,255,107,.7);
       box-shadow: 0 12px 28px rgba(0,0,0,.28), 0 0 18px rgba(107,232,255,.20);
     }
+    .card.selected::after {
+      content: "선택됨";
+      margin-left: 8px;
+      color: var(--lime);
+      font-size: 12px;
+      font-weight: 900;
+    }
     .card.moved { opacity: .55; }
     .card.placed-correct {
       opacity: 1;
@@ -382,6 +423,7 @@
     }
     .drop-title { color: var(--amber); font-weight: 900; }
     .drop-desc { color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .tap-guide { color: rgba(245,251,255,.74); font-size: 12px; line-height: 1.35; }
     .drop-zone.good-flash, .sparkle { animation: sparkle .7s ease; }
     .shake { animation: shake .34s ease; }
     @keyframes sparkle { 0% { box-shadow: 0 0 0 rgba(184,255,107,0); } 50% { box-shadow: 0 0 26px rgba(184,255,107,.72); } 100% { box-shadow: 0 0 0 rgba(184,255,107,0); } }
@@ -414,6 +456,17 @@
       padding: clamp(20px, 4vw, 46px);
     }
     .hero-img { width: 100%; max-height: 66vh; object-fit: contain; filter: drop-shadow(0 22px 38px rgba(0,0,0,.5)); }
+    .gem-title-img { width: min(454px, 67vw); max-height: 16vh; object-fit: contain; }
+    .gem-reward-gem { width: min(530px, 74vw); max-height: 66vh; object-fit: contain; filter: drop-shadow(0 22px 38px rgba(0,0,0,.55)) drop-shadow(0 0 28px rgba(184,255,107,.42)); }
+    .gem-reward-name {
+      color: #fff7b0;
+      font-weight: 900;
+      -webkit-text-stroke: 1px rgba(4, 12, 24, .86);
+      text-shadow:
+        0 2px 0 rgba(4,12,24,.9),
+        0 0 14px rgba(255,209,102,.56),
+        0 0 24px rgba(107,232,255,.30);
+    }
     .flash {
       position: absolute;
       inset: 0;
@@ -451,7 +504,7 @@
     .dogam-art {
       height: 150px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 6px;
       align-items: center;
       padding: 10px;
@@ -461,12 +514,13 @@
     .dogam-art.single { grid-template-columns: 1fr; }
     .dogam-art img {
       width: 100%;
-      height: 130px;
+      height: 150px;
       object-fit: contain;
       object-position: center;
       display: block;
       filter: drop-shadow(0 10px 18px rgba(0,0,0,.38));
     }
+    .dogam-card img { width: 100%; height: 150px; object-fit: contain; object-position: center; display: block; }
     .dogam-info { padding: 10px; display: grid; gap: 6px; }
     .dogam-info p { font-size: 13px; line-height: 1.38; }
     .dogam-card.locked { filter: grayscale(.72); opacity: .72; }
@@ -508,6 +562,14 @@
 
     @media (orientation: portrait) and (max-width: 820px) {
       #orientation { display: grid; }
+    }
+    @media (max-width: 1100px), (pointer: coarse) {
+      .stage-grid { grid-template-columns: minmax(190px, .74fr) minmax(330px, 1.38fr) minmax(190px, .74fr); gap: 10px; }
+      .scene-area { padding: 18px; }
+      .monster { width: min(30vw, 285px); height: min(46vh, 320px); right: 1.5%; bottom: 1.5%; }
+      .hotspot { width: 50px; height: 50px; z-index: 8; }
+      .character-strip img { width: min(8vw, 76px); }
+      .layer { padding-left: clamp(16px, 2.4vw, 30px); padding-right: clamp(16px, 2.4vw, 30px); }
     }
     @media (max-width: 900px) {
       .stage-grid, .activity-layout, .purify-scene, .reward-scene, .intro-scene, .clear-scene, .boss-grid { grid-template-columns: 1fr; }
@@ -601,7 +663,7 @@
         tool: "image/item_tool_source_stamp.png", gem: "image/item_gem_responsibility.png", gemName: "책임의 보석",
         event: "친구가 만든 그림이 발표 자료에 몰래 들어가 있고 출처가 사라졌어요.",
         clues: ["친구의 원본 그림", "출처가 사라진 발표 자료", "카피카피가 남긴 복사 흔적"],
-        hotspots: [[19, 38], [49, 28], [70, 56]],
+        hotspots: [[18, 30], [47, 22], [74, 34]],
         hint: "작품이 누구의 것인지, 허락을 받았는지, 출처가 남아 있는지 차례로 살펴봐요.",
         missionGuide: "친구 작품을 쓸 때는 허락과 출처가 있는지 확인하세요.",
         success: "다른 사람의 작품은 허락과 출처를 확인해야 해요.",
@@ -614,7 +676,8 @@
           cards: [
             ["친구에게 사용해도 되는지 물어본다", "good"], ["누가 만들었는지 출처를 적는다", "good"], ["내가 만든 것처럼 올리지 않는다", "good"],
             ["그냥 저장해서 내 발표에 넣는다", "bad"], ["출처를 지우고 깔끔하게 만든다", "bad"], ["친구 그림을 마음대로 바꿔 올린다", "bad"]
-          ]
+          ],
+          randomize: true
         }
       },
       {
@@ -623,7 +686,7 @@
         tool: "image/item_tool_privacy_shield.png", gem: "image/item_gem_protection.png", gemName: "보호의 보석",
         event: "AI 상담창이 이름, 얼굴 사진, 전화번호, 상담 내용을 모두 입력하라고 해요.",
         clues: ["이름 입력칸", "얼굴 사진 업로드 버튼", "비밀 상담 내용 창"],
-        hotspots: [[26, 32], [55, 36], [70, 66]],
+        hotspots: [[20, 28], [50, 22], [76, 36]],
         hint: "나를 바로 알아볼 수 있는 정보와 마음속 비밀은 보호 금고에 넣어야 해요.",
         missionGuide: "개인정보는 보호 금고에, 사용해도 되는 정보는 사용 가능 상자에 넣으세요.",
         success: "개인정보는 꼭 필요한 경우에도 조심해서 다뤄야 해요.",
@@ -636,7 +699,7 @@
           cards: [
             { id: "privacy-name", text: "이름", group: "protect" }, { id: "privacy-face", text: "얼굴 사진", group: "protect" }, { id: "privacy-phone", text: "전화번호", group: "protect" }, { id: "privacy-address", text: "집 주소", group: "protect" },
             { id: "privacy-password", text: "비밀번호", group: "protect" }, { id: "privacy-grade", text: "성적", group: "protect" }, { id: "privacy-talk", text: "상담 내용", group: "protect" }, { id: "privacy-health", text: "건강 정보", group: "protect" },
-            { id: "safe-nick", text: "가상의 별명", group: "safe" }, { id: "safe-topic", text: "학습 주제", group: "safe" }, { id: "safe-survey", text: "익명 설문 결과", group: "safe" }, { id: "safe-sentence", text: "직접 만든 예시 문장", group: "safe" }
+            { id: "safe-nick", text: "가상의 별명", group: "safe" }, { id: "safe-topic", text: "학습 주제", group: "safe" }, { id: "safe-survey", text: "익명 설문 결과", group: "safe" }
           ],
           randomize: true,
           fail: "이 정보가 나를 알아볼 수 있게 만드는지 생각해 봐요."
@@ -648,7 +711,7 @@
         tool: "image/item_tool_verification_lens.png", gem: "image/item_gem_verification.png", gemName: "확인의 보석",
         event: "AI 자료실에 그럴듯하지만 이상한 정보가 섞여 있어요.",
         clues: ["출처 없는 통계", "말이 안 되는 설명", "너무 자신만만한 AI 답변"],
-        hotspots: [[22, 58], [47, 31], [75, 45]],
+        hotspots: [[18, 34], [47, 24], [74, 36]],
         hint: "그럴듯해 보여도 출처, 다른 자료, 말이 되는지를 함께 확인해 보세요.",
         missionGuide: "AI 답변이 맞는지 출처와 다른 자료로 다시 확인하세요.",
         success: "AI의 답변도 출처와 다른 자료로 다시 확인해야 해요.",
@@ -670,7 +733,7 @@
         tool: "image/item_tool_respect_light.png", gem: "image/item_gem_respect.png", gemName: "존중의 보석",
         event: "친구 얼굴이 합성된 영상 썸네일이 방송실 화면에 떠 있어요.",
         clues: ["합성된 얼굴 화면", "친구들이 공유하려는 버튼", "피해 친구의 불안한 흔적"],
-        hotspots: [[40, 31], [67, 44], [24, 64]],
+        hotspots: [[24, 28], [54, 22], [78, 34]],
         hint: "가장 먼저 더 퍼지지 않게 멈추고, 피해 친구를 안심시키는 순서가 중요해요.",
         missionGuide: "합성 영상은 퍼뜨리지 말고, 친구를 도울 순서대로 대응하세요.",
         success: "친구의 얼굴과 마음은 장난으로 다루면 안 돼요.",
@@ -690,22 +753,30 @@
         tool: "image/item_tool_fact_check_magnifier.png", gem: "image/item_gem_truth.png", gemName: "진실의 보석",
         event: "학교 게시판에 이상한 소문과 자극적인 글이 퍼지고 있어요.",
         clues: ["출처 없는 게시글", "자극적인 제목", "공유를 재촉하는 문장"],
-        hotspots: [[23, 36], [51, 52], [76, 35]],
+        hotspots: [[18, 32], [48, 22], [76, 34]],
         hint: "급하게 공유하라는 말이 보이면 먼저 멈추고 출처와 다른 자료를 확인해요.",
         missionGuide: "수상한 게시글은 바로 공유하지 말고 확인하거나 어른에게 물어보세요.",
         success: "확인하지 않은 정보는 빠르게 퍼뜨리지 않는 것이 중요해요.",
         purify: "팩트체크 돋보기가 소문의 그림자를 걷어 내자 지어몬이 조용히 고개를 끄덕였어요.",
         activity: {
           type: "post",
-          intro: "게시글마다 가장 안전한 행동을 골라 주세요.",
+          intro: "게시글 카드를 세 구역으로 나누어 가짜뉴스를 정리하세요.",
           why: "확인하지 않은 정보는 친구들을 불안하게 만들 수 있어요.",
-          posts: [
-            { text: "출처 없는 게시글: 오늘 학교에 큰일 난대!", answers: ["확인", "선생님께 묻기"] },
-            { text: "자극적인 제목: 지금 안 보면 모두 손해!", answers: ["확인"] },
-            { text: "공유를 재촉하는 문장: 빨리 퍼뜨려!", answers: ["확인 전에는 공유하지 않기", "신고"] },
-            { text: "친구를 불안하게 하는 소문", answers: ["선생님께 묻기", "신고"] }
+          zones: [
+            { id: "danger-share", label: "바로 공유하면 위험", desc: "출처가 없거나 공유를 재촉하는 글" },
+            { id: "need-check", label: "먼저 확인 필요", desc: "사실일 수 있지만 더 확인해야 하는 글" },
+            { id: "safe-notice", label: "안전한 공지", desc: "공식 출처로 확인할 수 있는 안내" }
           ],
-          actions: ["공유", "확인", "선생님께 묻기", "신고", "확인 전에는 공유하지 않기"]
+          posts: [
+            { id: "post-rumor-school", text: "출처 없이 '내일부터 학교가 사라진대!'라고 적힌 게시글", group: "danger-share", reason: "출처가 없고 불안을 키운다." },
+            { id: "post-official-note", text: "공식 학교 알림장과 같은 내용의 안내", group: "safe-notice", reason: "확인 가능한 공식 안내다." },
+            { id: "post-hurry", text: "누가 썼는지 모르지만 '빨리 퍼뜨려!'라고 적힌 글", group: "danger-share", reason: "작성자와 근거가 없고 공유를 재촉한다." },
+            { id: "post-newslike", text: "뉴스처럼 보이지만 날짜와 출처가 없는 글", group: "need-check", reason: "사실일 수도 있지만 출처 확인이 필요하다." },
+            { id: "post-teacher-check", text: "선생님이 확인해 보자고 한 학급 게시글", group: "need-check", reason: "바로 공유보다 확인이 먼저다." },
+            { id: "post-school-home", text: "학교 공식 홈페이지에 올라온 행사 안내", group: "safe-notice", reason: "공식 출처가 있다." }
+          ],
+          randomize: true,
+          fail: "출처가 있는지, 누가 썼는지, 공유를 재촉하는지 다시 살펴봐요."
         }
       },
       {
@@ -714,7 +785,7 @@
         tool: "image/item_tool_report_button.png", gem: "image/item_gem_safety.png", gemName: "안전의 보석",
         event: "낯선 사람이 선물을 준다며 주소, 사진, 비밀번호를 요구해요.",
         clues: ["우리끼리 비밀", "어른에게 말하지 마", "사진 보내줘"],
-        hotspots: [[28, 40], [52, 30], [74, 62]],
+        hotspots: [[20, 30], [50, 22], [76, 34]],
         hint: "비밀로 하자, 어른에게 말하지 말자, 개인정보를 달라는 말은 위험 신호예요.",
         missionGuide: "위험한 채팅 문장을 모두 표시하고, 차단·신고·알리기를 선택하세요.",
         success: "수상한 메시지는 혼자 해결하지 말고 믿을 수 있는 어른에게 알려야 해요.",
@@ -734,7 +805,7 @@
         tool: "image/item_tool_kind_speech_bubble.png", gem: "image/item_gem_care.png", gemName: "배려의 보석",
         event: "친구 작품 아래에 상처 주는 댓글이 달렸어요.",
         clues: ["조롱 댓글", "비하 표현", "따돌림을 부르는 말"],
-        hotspots: [[22, 50], [50, 36], [73, 57]],
+        hotspots: [[18, 34], [48, 24], [76, 36]],
         hint: "댓글은 사실인지, 꼭 필요한지, 상처 주지 않는지 확인한 뒤 쓰면 좋아요.",
         missionGuide: "상처 댓글을 배려 댓글로 바꾸고, 댓글 전 확인 3가지를 누르세요.",
         success: "댓글도 친구의 마음을 생각해서 써야 해요.",
@@ -757,7 +828,7 @@
         tool: "image/tem_tool_fairness_scale.png", gem: "image/item_gem_fairness.png", gemName: "공정의 보석",
         event: "AI 평가기가 목소리 큰 학생, 인터넷 빠른 학생, 글씨가 예쁜 학생에게만 높은 점수를 줘요.",
         clues: ["목소리 크기 기준", "글씨 예쁨 기준", "인터넷 속도 기준"],
-        hotspots: [[30, 30], [52, 58], [76, 40]],
+        hotspots: [[20, 30], [50, 22], [76, 34]],
         hint: "능력과 상관없는 기준은 빼고, 여러 상황을 살피는 기준을 올려 보세요.",
         missionGuide: "불공정한 기준은 제거하고, 공정한 기준을 저울에 올리세요.",
         success: "AI 판단도 사람이 공정하게 살펴봐야 해요.",
@@ -859,6 +930,7 @@
       }
       return copy;
     }
+    const shuffled = (list) => shuffleArray(list);
 
     function gemKeyForStage(stage) {
       return BOSS_DATA.gems.find(g => g.name === stage.gemName)?.key || stage.gemName;
@@ -911,7 +983,7 @@
       if (showHud) renderHud();
     }
     function renderHud() {
-      const stageName = state.currentStage < STAGES.length ? `STAGE ${state.currentStage + 1}` : "FINAL";
+      const stageName = state.currentStage < STAGES.length ? `${state.currentStage + 1}단계` : "최종 단계";
       hud.innerHTML = `
         <span class="hud-chip">현재 ${stageName}</span>
         <span class="hud-chip">신뢰 에너지 <span class="energy-bar"><span class="energy-fill" style="width:${Math.max(0, Math.min(100, state.energy))}%"></span></span> ${state.energy}</span>
@@ -1032,6 +1104,12 @@
       sfx("click");
       playBgm("main");
       state.nickname = document.querySelector("#nickname")?.value.trim() || "별빛헌터";
+      state.currentStage = 0;
+      state.energy = 70;
+      state.collectedGems = [];
+      state.dogam = [];
+      state.foundClues = [];
+      state.cutIndex = 0;
       save();
       renderCharacterIntro(false);
     }
@@ -1114,7 +1192,7 @@
         ${setBg(stage.bg)}
         <div class="intro-scene">
           <div class="panel side-panel">
-            <p class="small">STAGE ${stage.id} · ${stage.place}</p>
+            <p class="small">${stage.id}단계 · ${stage.place}</p>
             <h2>${stage.name}</h2>
             <h3>${stage.topic}</h3>
             <p class="big" style="margin-top:12px;">${stage.event}</p>
@@ -1140,8 +1218,9 @@
             <p class="small">사건 발생</p>
             <h2>${stage.name}</h2>
             <p>${stage.event}</p>
+            <p class="big" style="margin-top:10px; color:var(--lime);">반짝이는 단서 3개를 찾아 눌러 보세요.</p>
             ${missionSteps(stage)}
-            <div class="tool-box ${state.foundClues.length === 3 ? "" : "locked"}">
+            <div class="tool-box ${state.foundClues.length === 3 ? "active-tool" : "locked"}">
               ${img(stage.tool, "도구")}
               <div><strong>${state.foundClues.length === 3 ? "도구 활성화!" : "도구 잠김"}</strong><p class="small">단서 ${state.foundClues.length}/3</p></div>
             </div>
@@ -1165,7 +1244,8 @@
       if (!state.foundClues.includes(clueIndex)) {
         state.foundClues.push(clueIndex);
         sfx("clue");
-        showToast(`단서 발견: ${STAGES[stageIndex].clues[clueIndex]}`);
+        const count = state.foundClues.length;
+        showToast(count === 3 ? "단서 3/3 발견! 도구가 활성화되었습니다!" : `단서 ${count}/3 발견! ${STAGES[stageIndex].clues[clueIndex]}`);
       }
       renderClueSearch(STAGES[stageIndex]);
     }
@@ -1198,6 +1278,13 @@
           </div>
         </div>`, true);
       initDragClick();
+      showMoveTutorial();
+    }
+
+    function showMoveTutorial() {
+      if (state.moveTutorialShown) return;
+      state.moveTutorialShown = true;
+      showToast("카드를 탭한 뒤, 넣을 곳을 탭해도 이동할 수 있어요!");
     }
 
     function renderSortActivity(stage) {
@@ -1209,7 +1296,7 @@
           return cardHtml(card.id || `s-${i}`, card.text, card.group);
         }).join("")}</div></div>
         <div><div class="drop-grid" style="grid-template-columns:repeat(${a.zones.length}, minmax(0, 1fr));">
-          ${a.zones.map(z => `<div class="drop-zone" data-zone="${z.id}"><div class="drop-title">${z.label}</div><div class="drop-desc">${z.desc || "알맞은 카드를 이곳에 놓으세요."}</div></div>`).join("")}
+          ${a.zones.map(z => `<div class="drop-zone" data-zone="${z.id}"><div class="drop-title">${z.label}</div><div class="drop-desc">${z.desc || "알맞은 카드를 이곳에 놓으세요."}</div><div class="tap-guide">카드를 선택한 뒤 여기를 누르세요.</div></div>`).join("")}
         </div>
         ${a.lens ? `<button style="margin-top:10px;" onclick="showToast('확인 렌즈: 출처가 없거나 오래된 정보는 다시 확인 표시가 빛나요.'); sfx('clue')">확인 렌즈 비추기</button>` : ""}
         <button class="primary sort-check" data-required="${cards.length}" data-feedback="${stage.activity.fail || "로키: 카드가 놓인 칸의 뜻을 다시 생각해 봐요."}" style="margin-top:10px;" onclick="checkSortActivity(STAGES[${stage.id - 1}])" ${stage.monsterId === "kaemutmon" ? "disabled" : ""}>분류 완료</button></div>
@@ -1227,10 +1314,12 @@
           card.classList.add("selected");
         });
         card.addEventListener("dragend", () => card.classList.remove("selected"));
-        card.addEventListener("click", () => {
+        card.addEventListener("click", e => {
+          e.stopPropagation();
           document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
           state.selectedCard = card;
           card.classList.add("selected");
+          showToast(`선택됨: ${card.textContent.replace("선택됨", "").trim()} - 옮길 곳을 눌러 주세요.`);
         });
       });
       document.querySelectorAll(".drop-zone").forEach(zone => {
@@ -1241,7 +1330,8 @@
           const card = document.querySelector(`[data-card="${id}"]`);
           if (card) moveCard(card, zone);
         });
-        zone.addEventListener("click", () => {
+        zone.addEventListener("click", e => {
+          if (e.target.closest(".card")) return;
           if (state.selectedCard) moveCard(state.selectedCard, zone);
         });
       });
@@ -1314,9 +1404,18 @@
 
     function renderPostCheckActivity(stage) {
       const a = stage.activity;
+      if (a.zones) {
+        const posts = a.randomize ? shuffled(a.posts) : a.posts;
+        return `<div class="activity-layout">
+          <div><h3>게시글 카드</h3><p class="small">출처, 작성자, 공유 재촉 문장을 살펴보세요.</p><div class="card-pile">${posts.map((p, i) => cardHtml(p.id || `post-${i}`, p.text, p.group, `data-reason="${p.reason}"`)).join("")}</div></div>
+          <div><div class="drop-grid" style="grid-template-columns:repeat(3, minmax(0, 1fr));">
+            ${a.zones.map(z => `<div class="drop-zone" data-zone="${z.id}"><div class="drop-title">${z.label}</div><div class="drop-desc">${z.desc}</div><div class="tap-guide">카드를 선택한 뒤 여기를 누르세요.</div></div>`).join("")}
+          </div>
+          <button class="primary sort-check" data-required="${posts.length}" data-feedback="${a.fail}" style="margin-top:10px;" onclick="checkPostCheckActivity(STAGES[${stage.id - 1}])" disabled>게시판 정리</button></div>
+        </div>`;
+      }
       return `<div class="grid" style="grid-template-columns:1fr 1fr;">
-        ${a.posts.map((p, i) => `<div class="info-card" data-post="${i}"><h3>게시글 ${i + 1}</h3><p>${p.text}</p><div class="choice-row" style="margin-top:10px;">${a.actions.map(ac => `<button class="choice" data-post-choice="${i}" data-action="${ac}" onclick="pickPostAction(this)">${ac}</button>`).join("")}</div></div>`).join("")}
-        <div><button class="primary" onclick="checkPostCheckActivity(STAGES[${stage.id - 1}])">게시판 정리</button></div>
+        ${a.posts.map((p, i) => `<div class="info-card" data-post="${i}"><h3>게시글 ${i + 1}</h3><p>${p.text}</p></div>`).join("")}
       </div>`;
     }
     function pickPostAction(btn) {
@@ -1325,6 +1424,19 @@
       sfx("click");
     }
     function checkPostCheckActivity(stage) {
+      if (stage.activity.zones) {
+        let ok = true;
+        document.querySelectorAll(".card[data-answer]").forEach(card => {
+          const zone = card.closest(".drop-zone");
+          if (!zone || zone.dataset.zone !== card.dataset.answer) ok = false;
+        });
+        if (ok) {
+          const reasons = [...document.querySelectorAll(".card[data-reason]")].map(card => `✓ ${card.textContent.replace("선택됨", "").trim()}: ${card.dataset.reason}`);
+          showToast("정리 성공! " + reasons.slice(0, 2).join(" / "));
+          setTimeout(() => successActivity(stage), 600);
+        } else failActivity(stage.activity.fail);
+        return;
+      }
       const ok = stage.activity.posts.every((p, i) => {
         const picked = document.querySelector(`[data-post-choice="${i}"].selected`)?.dataset.action;
         return p.answers.includes(picked);
@@ -1378,8 +1490,8 @@
           ${cards.map((c, i) => cardHtml(c.id || `fair-${i}`, c.text, c.type === "unfair" ? "remove" : "scale", `data-type="${c.type}"`)).join("")}
         </div></div>
         <div class="drop-grid cols-2">
-          <div class="drop-zone" data-zone="remove"><div class="drop-title">문제 기준 제거함</div><div class="drop-desc">실력과 상관없는 불공정 기준</div></div>
-          <div class="drop-zone" data-zone="scale"><div class="drop-title">공정 저울</div><div class="drop-desc">모두에게 기회가 있는 기준</div></div>
+          <div class="drop-zone" data-zone="remove"><div class="drop-title">문제 기준 제거</div><div class="drop-desc">실력과 상관없는 불공정 기준</div><div class="tap-guide">카드를 선택한 뒤 여기를 누르세요.</div></div>
+          <div class="drop-zone" data-zone="scale"><div class="drop-title">공정 저울에 올리기</div><div class="drop-desc">모두에게 기회가 있는 기준</div><div class="tap-guide">카드를 선택한 뒤 여기를 누르세요.</div></div>
           <button class="primary sort-check" data-required="${cards.length}" data-feedback="${stage.activity.fail}" onclick="checkFairnessBalanceActivity(STAGES[${stage.id - 1}])" disabled>저울 맞추기</button>
         </div>
       </div>`;
@@ -1431,14 +1543,15 @@
         <div class="reward-scene">
           <div class="panel side-panel">
             <p class="small">보석 획득 · 도감 등록</p>
-            <h2>${stage.gemName}</h2>
+            <h2 class="gem-reward-name">${stage.gemName}</h2>
             <p class="big">${stage.success}</p>
             <p style="margin-top:10px;">초혁신 박사: “좋네. ${stage.topic}의 약속이 학교의 신뢰 에너지를 회복시켰어.”</p>
             <button class="primary" style="margin-top:16px;" onclick="nextStage()">다음으로</button>
           </div>
           <div style="text-align:center;">
-            ${img(ASSETS.ui.gemGet, "보석 획득", "subtitle-img")}
-            ${img(stage.gem, stage.gemName, "hero-img sparkle")}
+            ${img(ASSETS.ui.gemGet, "보석 획득", "gem-title-img")}
+            <h2 class="gem-reward-name" style="margin:10px 0 12px;">${stage.gemName}</h2>
+            ${img(stage.gem, stage.gemName, "gem-reward-gem sparkle")}
           </div>
         </div>`, true);
     }
@@ -1459,7 +1572,7 @@
           </article>`;
         }
         return `<article class="dogam-card">
-          <div class="dogam-art">${img(stage.monster, `${stage.name} 정화 전`)}${img(stage.purified, `${stage.name} 정화 후`)}</div>
+          <div class="dogam-art single">${img(stage.monster, `${stage.name} 정화 전`)}</div>
           <div class="dogam-info">
             <h3>${stage.name}</h3>
             <p><strong>주제:</strong> ${stage.topic}</p>
@@ -1471,7 +1584,7 @@
       };
       const cards = STAGES.map(stage => {
         return dogamCard(stage);
-      }).join("") + `<article class="dogam-card ${state.dogam.includes("dima") ? "" : "locked"}">${state.dogam.includes("dima") ? `<div class="dogam-art">${img(BOSS_DATA.normal, "디마 정화 전")}${img(BOSS_DATA.purified, "디마 정화 후")}</div><div class="dogam-info"><h3>디마</h3><p><strong>주제:</strong> 모든 디지털 윤리 약속</p><p><strong>획득 보석:</strong> 8개 윤리 보석</p><p><strong>문제 행동:</strong> 여러 유혹 문장으로 판단을 흐리게 함</p><p><strong>정화 방법:</strong> 알맞은 보석을 연결해 약속을 되찾기</p></div>` : `<div class="dogam-art single">${img(BOSS_DATA.normal, "잠긴 디마")}</div><div class="dogam-info"><h3>최종 보스</h3><p>아직 정화하지 않았어요.</p><p class="small">디마는 최종 클리어 후 등록됩니다.</p></div>`}</article>`;
+      }).join("") + `<article class="dogam-card ${state.dogam.includes("dima") ? "" : "locked"}">${state.dogam.includes("dima") ? `<div class="dogam-art single">${img(BOSS_DATA.normal, "디마 정화 전")}</div><div class="dogam-info"><h3>디마</h3><p><strong>주제:</strong> 모든 디지털 윤리 약속</p><p><strong>획득 보석:</strong> 8개 윤리 보석</p><p><strong>문제 행동:</strong> 여러 유혹 문장으로 판단을 흐리게 함</p><p><strong>정화 방법:</strong> 알맞은 보석을 연결해 약속을 되찾기</p></div>` : `<div class="dogam-art single">${img(BOSS_DATA.normal, "잠긴 디마")}</div><div class="dogam-info"><h3>최종 보스</h3><p>아직 정화하지 않았어요.</p><p class="small">디마는 최종 클리어 후 등록됩니다.</p></div>`}</article>`;
       setScreen(`
         ${setBg(ASSETS.bg.schoolNormal)}
         <div class="modal">
@@ -1495,13 +1608,13 @@
       state.bossDeclared = [];
       playBgm("boss");
       save();
-      const temptations = shuffleArray(BOSS_DATA.matches);
+      const temptations = shuffled(BOSS_DATA.matches);
       const gems = STAGES.map(s => ({ key: gemKeyForStage(s), name: s.gemName, img: s.gem }));
       setScreen(`
         ${setBg(BOSS_DATA.bg)}
         <div class="layer hud-space boss-grid">
           <aside class="panel side-panel">
-            <p class="small">FINAL · 디마의 탑</p>
+            <p class="small">최종 단계 · 디마의 탑</p>
             <h2>디마</h2>
             <p>${BOSS_DATA.missionGuide}</p>
             ${lokiHelp("문장마다 어떤 디지털 윤리 약속이 필요한지 생각하고 보석을 연결하세요.")}
@@ -1511,7 +1624,7 @@
           <section class="panel side-panel">
             <h3>유혹 문장</h3>
             <p class="small">문장 순서는 매번 바뀝니다. 보석 이름이 아니라 약속의 뜻을 떠올려 보세요.</p>
-            <div class="tempt-list">${temptations.map(t => `<div class="drop-zone" data-boss="${t.id}" data-gem-key="${t.gemKey}" data-zone="${t.gemKey}"><strong>${t.text}</strong><p class="promise" hidden>${t.promise}</p></div>`).join("")}</div>
+            <div class="tempt-list">${temptations.map(t => `<div class="drop-zone" data-boss="${t.id}" data-gem-key="${t.gemKey}" data-zone="${t.gemKey}"><strong>${t.text}</strong><div class="tap-guide">보석을 선택한 뒤 여기를 누르세요.</div><p class="promise" hidden>${t.promise}</p></div>`).join("")}</div>
             <button class="primary" style="margin-top:12px;" onclick="checkBossGemPuzzle()">보석 공명 확인</button>
           </section>
         </div>`, true);
