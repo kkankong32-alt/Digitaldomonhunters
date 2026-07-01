@@ -594,6 +594,12 @@
         min-width: 0;
         min-height: 0;
         border-radius: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .screen, .screen.active {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
       .layer { padding: 6px; }
       .hud-space { padding-top: 38px; }
@@ -615,19 +621,31 @@
       .stage-grid {
         grid-template-columns: .76fr 1.42fr .82fr !important;
         gap: 6px;
-        overflow: hidden !important;
+        height: auto;
+        min-height: 100%;
+        overflow: visible !important;
       }
       .activity-layout, .boss-grid {
         grid-template-columns: .82fr 1.18fr !important;
         gap: 7px;
-        height: 100%;
+        height: auto;
+        min-height: 100%;
       }
       .intro-scene, .purify-scene, .reward-scene, .clear-scene {
         grid-template-columns: .92fr 1.08fr !important;
         gap: 8px;
-        padding: 8px;
+        height: auto;
+        min-height: 100%;
+        padding: 42px 8px 8px;
+        align-items: stretch;
       }
-      .side-panel { padding: 7px; max-height: none !important; }
+      .side-panel {
+        padding: 7px;
+        min-height: 0;
+        max-height: calc(100dvh - 50px) !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       .mission-guide { margin-top: 6px; padding: 7px; gap: 3px; }
       .mission-guide ol { padding-left: 16px; }
       .loki-help { grid-template-columns: 34px 1fr; margin-top: 6px; padding: 6px; gap: 6px; }
@@ -647,7 +665,7 @@
       .drop-title { font-size: 11px; }
       .drop-desc, .tap-guide { font-size: 9px; }
       .modal { padding: 8px; }
-      .modal-body { width: 96vw; max-height: 88dvh; padding: 10px; }
+      .modal-body { width: 96vw; max-height: 88dvh; padding: 10px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
       .modal-head { margin-bottom: 8px; }
       .dogam-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
       .dogam-art, .dogam-art img, .dogam-card img { height: 105px; }
