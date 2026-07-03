@@ -19,7 +19,7 @@
       --good: #77ffbf;
       --shadow: 0 18px 60px rgba(0, 0, 0, .45);
       --credit-bottom: 30px;
-      --credit-font-size: 15px;
+      --credit-font-size: 16px;
       font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
     }
 
@@ -153,6 +153,7 @@
       bottom: var(--credit-bottom);
       color: rgba(245,251,255,.82);
       font-size: var(--credit-font-size);
+      font-weight: 800;
       text-shadow: 0 2px 14px rgba(0,0,0,.55);
     }
 
@@ -1209,7 +1210,7 @@
             <button onclick="requestFullscreenMode()">전체화면</button>
             <button onclick="toggleTitleSound()">사운드 ${state.sound ? "ON" : "OFF"}</button>
           </div>
-          <p class="credit">made by 김종훈</p>
+          <p class="credit">made by 김종훈(쓰로인훈쌤)</p>
         </div>`, false);
       document.querySelector("#nickname").addEventListener("input", e => { state.nickname = e.target.value.trim(); save(); });
     }
